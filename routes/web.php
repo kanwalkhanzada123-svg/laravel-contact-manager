@@ -67,24 +67,53 @@ Route::middleware('auth')->group(function () {
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('name', 'like', "%{$searchTerm}%")
                   ->orWhere('email', 'like', "%{$searchTerm}%")
-                  ->orWhere('message', 'like', "%{$searchTerm}%");
+                  ->orWhere('message', 'like', "%{$searchTerm}%")
+                  ->orWhere('admin_notes', 'like', "%{$searchTerm}%");
             });
         }
 
-        if ($request->filled('status') && in_array($request->status, ['pending', 'replied'])) {
-            $query->where('status', $request->status);
+        if ($request->filled('status')) {
+            if ($request->status === 'starred') {
+                $query->where('is_starred', true);
+            } elseif (in_array($request->status, ['pending', 'replied'])) {
+                $query->where('status', $request->status);
+            }
         }
 
         $stats = [
             'total'   => Contact::count(),
-            'pending' => Contact::where('status', 'pending')->orWhereNull('status')->count(),
+            'pending' => Contact::where('status', '!=', 'replied')->orWhereNull('status')->count(),
             'replied' => Contact::where('status', 'replied')->count(),
+            'starred' => Contact::where('is_starred', true)->count(),
             'today'   => Contact::whereDate('created_at', \Carbon\Carbon::today())->count(),
         ];
 
-        $contacts = $query->latest()->paginate(10)->withQueryString();
+        $contacts = $query->orderBy('is_starred', 'desc')->latest()->paginate(10)->withQueryString();
         return view('messages', compact('contacts', 'stats'));
     })->name('messages.index');
+
+    Route::post('/messages/{id}/toggle-star', function ($id) {
+        $contact = Contact::findOrFail($id);
+        $contact->is_starred = !$contact->is_starred;
+        $contact->save();
+        return back();
+    })->name('messages.toggleStar');
+
+    Route::post('/messages/{id}/notes', function (\Illuminate\Http\Request $request, $id) {
+        $contact = Contact::findOrFail($id);
+        $contact->update(['admin_notes' => $request->admin_notes]);
+        return back()->with('success', 'Admin note updated successfully!');
+    })->name('messages.updateNotes');
+
+    Route::post('/messages/bulk-delete', function (\Illuminate\Http\Request $request) {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:contacts,id',
+        ]);
+
+        Contact::whereIn('id', $request->ids)->delete();
+        return back()->with('success', count($request->ids) . ' leads delete ho gayin!');
+    })->name('messages.bulkDelete');
 
     Route::get('/messages/export/csv', function () {
         $contacts = Contact::latest()->get();
@@ -100,7 +129,7 @@ Route::middleware('auth')->group(function () {
 
         $callback = function () use ($contacts) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['ID', 'Name', 'Email', 'Message', 'Status', 'Created At']);
+            fputcsv($file, ['ID', 'Name', 'Email', 'Message', 'Admin Notes', 'Status', 'Starred', 'Created At']);
 
             foreach ($contacts as $contact) {
                 fputcsv($file, [
@@ -108,11 +137,12 @@ Route::middleware('auth')->group(function () {
                     $contact->name,
                     $contact->email,
                     $contact->message,
+                    $contact->admin_notes ?? '',
                     $contact->status ?? 'pending',
+                    $contact->is_starred ? 'Yes' : 'No',
                     $contact->created_at->format('Y-m-d H:i:s')
                 ]);
             }
-
             fclose($file);
         };
 

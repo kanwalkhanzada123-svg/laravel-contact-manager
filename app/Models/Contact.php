@@ -14,5 +14,11 @@ class Contact extends Model
         'email',
         'message',
         'status',
+        'admin_notes',
+        'is_starred',
+    ];
+
+    protected $casts = [
+        'is_starred' => 'boolean',
     ];
 }
