@@ -6,27 +6,35 @@
     <title>Contact Us</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
-    <!-- Card Container -->
     <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-gray-200">
-        
-        <div class="flex justify-between items-center mb-6">
+        <!-- Header with Admin Login Button -->
+        <div class="flex items-center justify-between mb-6">
             <h2 class="text-2xl font-bold text-gray-800">Contact Us</h2>
-            <a href="/messages" class="text-xs bg-indigo-50 text-indigo-600 font-semibold px-3 py-1 rounded-full border border-indigo-200 hover:bg-indigo-100">View Messages →</a>
+            
+            @auth
+                <!-- Agar Login ho to Dashboard ka link -->
+                <a href="/messages" class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-full font-medium hover:bg-indigo-100 transition">
+                    Dashboard →
+                </a>
+            @else
+                <!-- Agar Login na ho to Login ka button -->
+                <a href="/login" class="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium hover:bg-indigo-50 hover:text-indigo-600 transition">
+                    Admin Login 🔐
+                </a>
+            @endauth
         </div>
 
-        <!-- Success Alert -->
-        @if(session('success'))
+        @if (session('success'))
             <div class="mb-4 p-3 bg-green-100 border border-green-300 text-green-700 rounded-lg text-sm">
                 {{ session('success') }}
             </div>
         @endif
 
-        <!-- Error Alert -->
         @if ($errors->any())
             <div class="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm">
-                <ul class="list-disc pl-4">
+                <ul class="list-disc list-inside">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
