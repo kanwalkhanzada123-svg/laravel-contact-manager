@@ -4,12 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Models\Contact;
 use App\Http\Controllers\PageController;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-*/
-
 Route::get('/', function () {
     return view('welcome');
 });
@@ -31,6 +25,7 @@ Route::post('/contact-submit', function (\Illuminate\Http\Request $request) {
         'name' => $request->name,
         'email' => $request->email,
         'message' => $request->message,
+        'status' => 'pending',
     ]);
 
     return back()->with('success', 'Message successfully sent!');
@@ -67,7 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/messages', function (\Illuminate\Http\Request $request) {
         $query = Contact::query();
 
-        if ($request->has('search') && $request->search != '') {
+        if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('name', 'like', "%{$searchTerm}%")
@@ -76,8 +71,19 @@ Route::middleware('auth')->group(function () {
             });
         }
 
-        $contacts = $query->latest()->paginate(10);
-        return view('messages', compact('contacts'));
+        if ($request->filled('status') && in_array($request->status, ['pending', 'replied'])) {
+            $query->where('status', $request->status);
+        }
+
+        $stats = [
+            'total'   => Contact::count(),
+            'pending' => Contact::where('status', 'pending')->orWhereNull('status')->count(),
+            'replied' => Contact::where('status', 'replied')->count(),
+            'today'   => Contact::whereDate('created_at', \Carbon\Carbon::today())->count(),
+        ];
+
+        $contacts = $query->latest()->paginate(10)->withQueryString();
+        return view('messages', compact('contacts', 'stats'));
     })->name('messages.index');
 
     Route::get('/messages/export/csv', function () {
@@ -94,7 +100,7 @@ Route::middleware('auth')->group(function () {
 
         $callback = function () use ($contacts) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['ID', 'Name', 'Email', 'Message', 'Created At']);
+            fputcsv($file, ['ID', 'Name', 'Email', 'Message', 'Status', 'Created At']);
 
             foreach ($contacts as $contact) {
                 fputcsv($file, [
@@ -102,6 +108,7 @@ Route::middleware('auth')->group(function () {
                     $contact->name,
                     $contact->email,
                     $contact->message,
+                    $contact->status ?? 'pending',
                     $contact->created_at->format('Y-m-d H:i:s')
                 ]);
             }

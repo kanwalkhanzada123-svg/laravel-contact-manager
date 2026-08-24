@@ -11,8 +11,7 @@ class PageController extends Controller
 {
     public function showAbout()
     {
-        $userName = "Maria";
-        return view('about', ['name' => $userName]);
+        return view('about');
     }
 
     public function reply(Request $request, $id)
@@ -24,9 +23,9 @@ class PageController extends Controller
 
         $contact = Contact::findOrFail($id);
 
-        Mail::to($contact->email)->send(
-            new LeadReplyMail($request->message, $request->subject, $contact->name)
-        );
+        Mail::to($contact->email)->send(new LeadReplyMail($request->subject, $request->message, $contact->name));
+
+        $contact->update(['status' => 'replied']);
 
         return back()->with('success', 'Reply email sent successfully!');
     }
