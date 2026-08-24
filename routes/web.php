@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Models\Contact;
 use App\Http\Controllers\PageController;
+use App\Mail\AutoResponderMail;
 
 Route::get('/', function () {
     return view('welcome');
@@ -26,7 +27,14 @@ Route::post('/contact-submit', function (\Illuminate\Http\Request $request) {
         'email' => $request->email,
         'message' => $request->message,
         'status' => 'pending',
+        'stage' => 'new',
     ]);
+
+    try {
+        \Illuminate\Support\Facades\Mail::to($request->email)->send(new AutoResponderMail($request->name));
+    } catch (\Exception $e) {
+        // Log or bypass if mailer fails
+    }
 
     return back()->with('success', 'Message successfully sent!');
 })->name('contact.submit');
@@ -46,9 +54,7 @@ Route::post('/login-submit', function (\Illuminate\Http\Request $request) {
         return redirect()->intended('/messages');
     }
 
-    return back()->withErrors([
-        'email' => 'Invalid credentials provided.',
-    ]);
+    return back()->withErrors(['email' => 'Invalid credentials provided.']);
 })->name('login.submit');
 
 Route::post('/logout', function (\Illuminate\Http\Request $request) {
@@ -60,6 +66,7 @@ Route::post('/logout', function (\Illuminate\Http\Request $request) {
 
 Route::middleware('auth')->group(function () {
     Route::get('/messages', function (\Illuminate\Http\Request $request) {
+        $viewType = $request->get('view', 'table'); // 'table' or 'kanban'
         $query = Contact::query();
 
         if ($request->filled('search')) {
@@ -88,9 +95,33 @@ Route::middleware('auth')->group(function () {
             'today'   => Contact::whereDate('created_at', \Carbon\Carbon::today())->count(),
         ];
 
+        if ($viewType === 'kanban') {
+            $allContacts = $query->orderBy('is_starred', 'desc')->latest()->get();
+            $kanbanLeads = [
+                'new' => $allContacts->where('stage', 'new'),
+                'contacted' => $allContacts->where('stage', 'contacted'),
+                'won' => $allContacts->where('stage', 'won'),
+                'lost' => $allContacts->where('stage', 'lost'),
+            ];
+            return view('messages', compact('kanbanLeads', 'stats', 'viewType'));
+        }
+
         $contacts = $query->orderBy('is_starred', 'desc')->latest()->paginate(10)->withQueryString();
-        return view('messages', compact('contacts', 'stats'));
+        return view('messages', compact('contacts', 'stats', 'viewType'));
     })->name('messages.index');
+
+    Route::post('/messages/{id}/update-stage', function (\Illuminate\Http\Request $request, $id) {
+        $contact = Contact::findOrFail($id);
+        $stage = $request->stage;
+        if (in_array($stage, ['new', 'contacted', 'won', 'lost'])) {
+            $contact->stage = $stage;
+            if ($stage === 'contacted' || $stage === 'won') {
+                $contact->status = 'replied';
+            }
+            $contact->save();
+        }
+        return response()->json(['success' => true]);
+    })->name('messages.updateStage');
 
     Route::post('/messages/{id}/toggle-star', function ($id) {
         $contact = Contact::findOrFail($id);
@@ -129,7 +160,7 @@ Route::middleware('auth')->group(function () {
 
         $callback = function () use ($contacts) {
             $file = fopen('php://output', 'w');
-            fputcsv($file, ['ID', 'Name', 'Email', 'Message', 'Admin Notes', 'Status', 'Starred', 'Created At']);
+            fputcsv($file, ['ID', 'Name', 'Email', 'Message', 'Stage', 'Admin Notes', 'Status', 'Starred', 'Created At']);
 
             foreach ($contacts as $contact) {
                 fputcsv($file, [
@@ -137,6 +168,7 @@ Route::middleware('auth')->group(function () {
                     $contact->name,
                     $contact->email,
                     $contact->message,
+                    $contact->stage ?? 'new',
                     $contact->admin_notes ?? '',
                     $contact->status ?? 'pending',
                     $contact->is_starred ? 'Yes' : 'No',

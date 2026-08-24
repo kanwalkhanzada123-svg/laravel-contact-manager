@@ -14,6 +14,7 @@ class Contact extends Model
         'email',
         'message',
         'status',
+        'stage',
         'admin_notes',
         'is_starred',
     ];
