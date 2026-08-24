@@ -64,20 +64,44 @@ Route::post('/logout', function (Request $request) {
 
 // Protected Admin Routes (Requires Login)
 Route::middleware('auth')->group(function () {
-    Route::get('/messages', function () {
-        $messages = Contact::latest()->get();
-        return view('messages', compact('messages'));
+    Route::get('/messages', function (Request $request) {
+        $query = Contact::query();
+
+        // Search by Name or Email
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', "%{$searchTerm}%")
+                  ->orWhere('email', 'like', "%{$searchTerm}%")
+                  ->orWhere('message', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Filter by Status (all, unread, read)
+        if ($request->filled('status') && in_array($request->status, ['read', 'unread'])) {
+            $query->where('status', $request->status);
+        }
+
+        // 5 records per page with search query string preserved
+        $messages = $query->latest()->paginate(5)->withQueryString();
+
+        // Status counts for cards
+        $totalCount = Contact::count();
+        $unreadCount = Contact::where('status', 'unread')->count();
+        $readCount = Contact::where('status', 'read')->count();
+
+        return view('messages', compact('messages', 'totalCount', 'unreadCount', 'readCount'));
     });
 
     Route::patch('/messages/{id}/status', function ($id) {
         $contact = Contact::findOrFail($id);
         $contact->status = ($contact->status === 'unread') ? 'read' : 'unread';
         $contact->save();
-        return redirect('/messages')->with('success', 'Status update ho gaya!');
+        return back()->with('success', 'Status update ho gaya!');
     });
 
     Route::delete('/messages/{id}', function ($id) {
         Contact::findOrFail($id)->delete();
-        return redirect('/messages')->with('success', 'Message delete ho gaya!');
+        return back()->with('success', 'Message delete ho gaya!');
     });
 });
