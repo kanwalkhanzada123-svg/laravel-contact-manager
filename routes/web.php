@@ -62,12 +62,11 @@ Route::post('/logout', function (Request $request) {
     return redirect('/login');
 });
 
-// Protected Admin Routes (Requires Login)
+// Protected Admin Routes
 Route::middleware('auth')->group(function () {
     Route::get('/messages', function (Request $request) {
         $query = Contact::query();
 
-        // Search by Name or Email
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
@@ -77,15 +76,12 @@ Route::middleware('auth')->group(function () {
             });
         }
 
-        // Filter by Status (all, unread, read)
         if ($request->filled('status') && in_array($request->status, ['read', 'unread'])) {
             $query->where('status', $request->status);
         }
 
-        // 5 records per page with search query string preserved
         $messages = $query->latest()->paginate(5)->withQueryString();
 
-        // Status counts for cards
         $totalCount = Contact::count();
         $unreadCount = Contact::where('status', 'unread')->count();
         $readCount = Contact::where('status', 'read')->count();
@@ -93,11 +89,45 @@ Route::middleware('auth')->group(function () {
         return view('messages', compact('messages', 'totalCount', 'unreadCount', 'readCount'));
     });
 
-    Route::patch('/messages/{id}/status', function ($id) {
+    // One-click Direct Status Toggle Route
+    Route::post('/messages/{id}/toggle-status', function ($id) {
         $contact = Contact::findOrFail($id);
         $contact->status = ($contact->status === 'unread') ? 'read' : 'unread';
         $contact->save();
-        return back()->with('success', 'Status update ho gaya!');
+        return back()->with('success', 'Lead status successfully updated!');
+    });
+
+    // Export Leads as CSV
+    Route::get('/messages/export/csv', function () {
+        $contacts = Contact::latest()->get();
+        $csvFileName = 'leads_export_' . date('Y-m-d_H-i') . '.csv';
+
+        $headers = [
+            "Content-Type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=\"$csvFileName\"",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        ];
+
+        $callback = function () use ($contacts) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['ID', 'Name', 'Email', 'Message', 'Status', 'Date Submitted']);
+
+            foreach ($contacts as $contact) {
+                fputcsv($file, [
+                    $contact->id,
+                    $contact->name,
+                    $contact->email ?? 'N/A',
+                    $contact->message,
+                    ucfirst($contact->status),
+                    $contact->created_at ? $contact->created_at->format('Y-m-d H:i:s') : 'N/A'
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     });
 
     Route::delete('/messages/{id}', function ($id) {
