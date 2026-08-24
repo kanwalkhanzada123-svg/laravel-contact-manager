@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeadDesk - CRM Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -92,6 +94,39 @@
                     <h3 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ $stats['today'] }}</h3>
                 </div>
                 <div class="w-10 h-10 bg-blue-50 dark:bg-blue-950/60 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 text-lg font-bold">⚡</div>
+            </div>
+        </div>
+
+        <!-- Analytics Visual Chart Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white">Inquiry Overview & Trends</h3>
+                    <span class="text-xs text-slate-400">Live Status Metrics</span>
+                </div>
+                <div class="h-56">
+                    <canvas id="leadsBarChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-1">Conversion Ratio</h3>
+                    <p class="text-xs text-slate-400 mb-3">Pending vs Replied</p>
+                    <div class="h-44 flex items-center justify-center">
+                        <canvas id="leadsDoughnutChart"></canvas>
+                    </div>
+                </div>
+                <div class="flex justify-around text-center pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+                    <div>
+                        <span class="text-amber-500 font-bold block">{{ $stats['pending'] }}</span>
+                        <span class="text-slate-400">Pending</span>
+                    </div>
+                    <div>
+                        <span class="text-emerald-500 font-bold block">{{ $stats['replied'] }}</span>
+                        <span class="text-slate-400">Replied</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -229,9 +264,9 @@
         @endforeach
     </main>
 
-    <!-- Reply Modal -->
+    <!-- Reply Modal with Quick Templates -->
     <div id="replyModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-xl rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
                 <div>
                     <h3 class="font-bold text-slate-900 dark:text-white text-base">Send Reply</h3>
@@ -242,6 +277,23 @@
 
             <form id="replyForm" method="POST" action="" class="p-6 space-y-4">
                 @csrf
+
+                <!-- Quick Response Templates -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">⚡ Quick Templates (Click to fill)</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="insertTemplate('quotation')" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 text-[11px] font-medium rounded-md border border-slate-200 dark:border-slate-600 transition">
+                            📄 Price Quotation
+                        </button>
+                        <button type="button" onclick="insertTemplate('meeting')" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 text-[11px] font-medium rounded-md border border-slate-200 dark:border-slate-600 transition">
+                            📅 Schedule Call
+                        </button>
+                        <button type="button" onclick="insertTemplate('resolved')" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 text-[11px] font-medium rounded-md border border-slate-200 dark:border-slate-600 transition">
+                            ✅ Inquiry Resolved
+                        </button>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Subject</label>
                     <input type="text" name="subject" id="modalSubject" required 
@@ -250,7 +302,7 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Your Response</label>
-                    <textarea name="message" rows="5" required placeholder="Write reply..." 
+                    <textarea name="message" id="modalMessageArea" rows="5" required placeholder="Write reply or pick a quick template..." 
                         class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
                 </div>
 
@@ -295,16 +347,36 @@
     </div>
 
     <script>
+        let currentRecipientName = '';
+
         function openReplyModal(leadId, name, email) {
+            currentRecipientName = name;
             document.getElementById('modalCustomerName').textContent = name;
             document.getElementById('modalCustomerEmail').textContent = email;
             document.getElementById('modalSubject').value = 'Re: Regarding your inquiry on LeadDesk';
+            document.getElementById('modalMessageArea').value = '';
             document.getElementById('replyForm').action = '/messages/' + leadId + '/reply';
             document.getElementById('replyModal').classList.remove('hidden');
         }
 
         function closeReplyModal() {
             document.getElementById('replyModal').classList.add('hidden');
+        }
+
+        function insertTemplate(type) {
+            const subject = document.getElementById('modalSubject');
+            const textarea = document.getElementById('modalMessageArea');
+            
+            if (type === 'quotation') {
+                subject.value = 'Quotation & Project Scope - LeadDesk';
+                textarea.value = `Hi ${currentRecipientName},\n\nThank you for reaching out to us. Based on your inquiry, we would love to share our pricing packages and project timeline with you.\n\nPlease let us know if you would like to proceed.\n\nBest regards,\nSupport Team`;
+            } else if (type === 'meeting') {
+                subject.value = 'Let\'s schedule a quick call - LeadDesk';
+                textarea.value = `Hi ${currentRecipientName},\n\nWe would love to discuss your requirements in detail over a brief 10-minute call. Please let us know your convenient time for this week.\n\nBest regards,\nSupport Team`;
+            } else if (type === 'resolved') {
+                subject.value = 'Update regarding your recent inquiry';
+                textarea.value = `Hi ${currentRecipientName},\n\nWe have looked into your query and the necessary updates have been made. Please feel free to reach out if you have any further questions.\n\nBest regards,\nSupport Team`;
+            }
         }
 
         function openNoteModal(leadId, noteText) {
@@ -364,6 +436,67 @@
             document.documentElement.classList.remove('dark');
             document.getElementById('themeIcon').textContent = '🌙';
         }
+
+        // Live Charts Initialization
+        document.addEventListener("DOMContentLoaded", function() {
+            const stats = {
+                total: {{ $stats['total'] }},
+                pending: {{ $stats['pending'] }},
+                replied: {{ $stats['replied'] }},
+                starred: {{ $stats['starred'] }},
+                today: {{ $stats['today'] }}
+            };
+
+            // Bar Chart
+            const barCtx = document.getElementById('leadsBarChart').getContext('2d');
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Total', 'Pending', 'Replied', 'Starred', "Today's"],
+                    datasets: [{
+                        label: 'Inquiries',
+                        data: [stats.total, stats.pending, stats.replied, stats.starred, stats.today],
+                        backgroundColor: [
+                            'rgba(79, 70, 229, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(234, 179, 8, 0.7)',
+                            'rgba(59, 130, 246, 0.7)'
+                        ],
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(148, 163, 184, 0.1)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Doughnut Chart
+            const doughnutCtx = document.getElementById('leadsDoughnutChart').getContext('2d');
+            new Chart(doughnutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'Replied'],
+                    datasets: [{
+                        data: [stats.pending || 1, stats.replied || 0],
+                        backgroundColor: ['#f59e0b', '#10b981'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '75%'
+                }
+            });
+        });
     </script>
 </body>
 </html>
