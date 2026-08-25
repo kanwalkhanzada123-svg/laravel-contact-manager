@@ -37,7 +37,7 @@ Route::post('/contact', function (Request $request) {
     return back()->with('success', 'Your inquiry has been submitted successfully!');
 })->name('contact.store');
 
-// Authentication Routes
+// Simple Authentication Routes
 Route::get('/login', function () {
     if (Auth::check()) {
         return redirect()->route('messages.index');
@@ -130,7 +130,7 @@ Route::middleware('auth')->group(function () {
         }
     })->name('messages.replyEmail');
 
-    // Update Status via Drag & Drop AJAX
+    // Update Status via AJAX Drag & Drop OR Direct Form Action
     Route::post('/messages/{id}/update-status', function (Request $request, $id) {
         $request->validate([
             'status' => 'required|in:pending,replied,won,lost',
@@ -140,11 +140,15 @@ Route::middleware('auth')->group(function () {
         $contact->status = $request->status;
         $contact->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Status updated successfully',
-            'status'  => $contact->status
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Status updated successfully',
+                'status'  => $contact->status
+            ]);
+        }
+
+        return back()->with('success', 'Lead status updated to ' . ucfirst($request->status) . '!');
     })->name('messages.updateStatus');
 
     // Update Lead Details via Modal

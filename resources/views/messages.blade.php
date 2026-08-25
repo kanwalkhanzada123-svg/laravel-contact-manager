@@ -118,10 +118,10 @@
         <div class="flex flex-wrap items-center justify-between gap-3 bg-[#1e293b] p-3 rounded-2xl border border-slate-800">
             <div class="flex items-center gap-2">
                 <span class="text-xs text-slate-400 font-semibold ml-2">Priority:</span>
-                <button onclick="filterPriority('all')" class="priority-btn active px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition" data-prio="all">All</button>
-                <button onclick="filterPriority('High')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition" data-prio="High">🔥 High</button>
-                <button onclick="filterPriority('Medium')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition" data-prio="Medium">⚡ Medium</button>
-                <button onclick="filterPriority('Low')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition" data-prio="Low">☕ Low</button>
+                <button onclick="filterPriority('all')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition shadow-sm" data-prio="all">All</button>
+                <button onclick="filterPriority('High')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition" data-prio="High">🔥 High</button>
+                <button onclick="filterPriority('Medium')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition" data-prio="Medium">⚡ Medium</button>
+                <button onclick="filterPriority('Low')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition" data-prio="Low">☕ Low</button>
             </div>
             <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search leads, notes..." 
                    class="w-full sm:w-64 px-3.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500">
@@ -171,11 +171,21 @@
                                     </span>
                                 </td>
                                 <td class="p-3.5 text-slate-400">{{ $contact->created_at ? $contact->created_at->format('M d, Y') : '-' }}</td>
-                                <td class="p-3.5 text-right" onclick="event.stopPropagation()">
+                                <td class="p-3.5 text-right flex justify-end items-center gap-1.5" onclick="event.stopPropagation()">
+                                    @if($contact->status !== 'won')
+                                        <form action="{{ route('messages.updateStatus', $contact->id) }}" method="POST" class="inline">
+                                            @csrf
+                                            <input type="hidden" name="status" value="won">
+                                            <button type="submit" title="Mark as Won" class="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 rounded-lg text-[10px] font-bold transition">
+                                                🏆 Won
+                                            </button>
+                                        </form>
+                                    @endif
+
                                     <form action="{{ route('messages.destroy', $contact->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete message?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-rose-400 hover:text-rose-300 font-semibold text-xs">Delete</button>
+                                        <button type="submit" class="text-rose-400 hover:text-rose-300 font-semibold text-xs ml-1">Delete</button>
                                     </form>
                                 </td>
                             </tr>
