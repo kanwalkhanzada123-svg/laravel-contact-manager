@@ -97,3 +97,21 @@ Route::post('/messages/{id}/update-status', function (Request $request, $id) {
 
     return response()->json(['success' => true, 'message' => 'Status updated successfully!']);
 })->name('messages.updateStatus');
+// Update Lead Details, Notes & Deal Value
+Route::post('/messages/{id}/update-details', function (Illuminate\Http\Request $request, $id) {
+    $request->validate([
+        'internal_notes' => 'nullable|string',
+        'deal_value'     => 'nullable|numeric|min:0',
+        'priority'       => 'nullable|string|in:Low,Medium,High',
+    ]);
+
+    $contact = App\Models\Contact::findOrFail($id);
+    $contact->internal_notes = $request->internal_notes;
+    $contact->deal_value = $request->deal_value ?? 0;
+    if ($request->filled('priority')) {
+        $contact->priority = $request->priority;
+    }
+    $contact->save();
+
+    return back()->with('success', 'Lead details updated successfully!');
+})->name('messages.updateDetails');

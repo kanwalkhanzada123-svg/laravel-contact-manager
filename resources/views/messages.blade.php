@@ -5,21 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeadDesk - CRM Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        darkBg: '#0f172a',
-                        cardBg: '#1e293b',
-                    }
-                }
-            }
-        }
-    </script>
 </head>
 <body class="bg-[#0f172a] text-gray-200 font-sans min-h-screen p-4 md:p-8">
 
@@ -100,7 +86,7 @@
             </div>
         </div>
 
-        <!-- 1. TABLE VIEW (Default) -->
+        <!-- TABLE VIEW -->
         <div id="table-view" class="bg-[#1e293b] rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
             <div class="p-4 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center gap-3">
                 <h2 class="font-bold text-white text-base">Inquiries Inbox</h2>
@@ -115,6 +101,7 @@
                             <th class="p-3.5">Name</th>
                             <th class="p-3.5">Contact</th>
                             <th class="p-3.5">Message</th>
+                            <th class="p-3.5">Deal Value</th>
                             <th class="p-3.5">Status</th>
                             <th class="p-3.5">Date</th>
                             <th class="p-3.5 text-right">Actions</th>
@@ -122,13 +109,14 @@
                     </thead>
                     <tbody id="leadsTableBody" class="divide-y divide-slate-800/60">
                         @forelse($contacts as $contact)
-                            <tr class="hover:bg-slate-800/40 transition">
+                            <tr class="hover:bg-slate-800/60 transition cursor-pointer" onclick="openLeadModal({{ json_encode($contact) }})">
                                 <td class="p-3.5 font-semibold text-white">{{ $contact->name }}</td>
                                 <td class="p-3.5">
                                     <div>{{ $contact->email }}</div>
                                     <div class="text-[11px] text-slate-400">{{ $contact->phone ?? 'N/A' }}</div>
                                 </td>
                                 <td class="p-3.5 max-w-xs truncate text-slate-300">{{ $contact->message }}</td>
+                                <td class="p-3.5 text-indigo-400 font-bold">${{ number_format($contact->deal_value ?? 0) }}</td>
                                 <td class="p-3.5">
                                     <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase
                                         {{ $contact->status == 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : '' }}
@@ -139,7 +127,7 @@
                                     </span>
                                 </td>
                                 <td class="p-3.5 text-slate-400">{{ $contact->created_at ? $contact->created_at->format('M d, Y') : '-' }}</td>
-                                <td class="p-3.5 text-right">
+                                <td class="p-3.5 text-right" onclick="event.stopPropagation()">
                                     <form action="{{ route('messages.destroy', $contact->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete message?');">
                                         @csrf
                                         @method('DELETE')
@@ -149,7 +137,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="p-6 text-center text-slate-500">No leads found.</td>
+                                <td colspan="7" class="p-6 text-center text-slate-500">No leads found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -163,18 +151,18 @@
             @endif
         </div>
 
-        <!-- 2. KANBAN PIPELINE VIEW (Drag & Drop) -->
+        <!-- KANBAN PIPELINE VIEW -->
         <div id="pipeline-view" class="hidden grid grid-cols-1 md:grid-cols-4 gap-4">
             
             <!-- Pending -->
             <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-amber-400 text-sm flex items-center gap-1.5">⏳ Pending</h3>
+                    <h3 class="font-bold text-amber-400 text-sm">⏳ Pending</h3>
                     <span class="text-xs bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">{{ $pipeline['pending']->count() }}</span>
                 </div>
                 <div id="pending" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="pending">
                     @foreach($pipeline['pending'] as $lead)
-                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}">
+                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}" onclick="openLeadModal({{ json_encode($lead) }})">
                             <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
                             <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
                             <div class="mt-2.5 flex justify-between items-center text-[11px]">
@@ -186,15 +174,15 @@
                 </div>
             </div>
 
-            <!-- Replied / In Discussion -->
+            <!-- Replied / Discussion -->
             <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-blue-400 text-sm flex items-center gap-1.5">💬 Discussion</h3>
+                    <h3 class="font-bold text-blue-400 text-sm">💬 Discussion</h3>
                     <span class="text-xs bg-blue-400/20 text-blue-300 px-2 py-0.5 rounded-full font-bold">{{ $pipeline['replied']->count() }}</span>
                 </div>
                 <div id="replied" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="replied">
                     @foreach($pipeline['replied'] as $lead)
-                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}">
+                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}" onclick="openLeadModal({{ json_encode($lead) }})">
                             <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
                             <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
                             <div class="mt-2.5 flex justify-between items-center text-[11px]">
@@ -209,12 +197,12 @@
             <!-- Won -->
             <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-emerald-400 text-sm flex items-center gap-1.5">🏆 Won Deals</h3>
+                    <h3 class="font-bold text-emerald-400 text-sm">🏆 Won Deals</h3>
                     <span class="text-xs bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">{{ $pipeline['won']->count() }}</span>
                 </div>
                 <div id="won" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="won">
                     @foreach($pipeline['won'] as $lead)
-                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border-l-4 border-l-emerald-500 border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-emerald-400/50 transition" data-id="{{ $lead->id }}">
+                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border-l-4 border-l-emerald-500 border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-emerald-400/50 transition" data-id="{{ $lead->id }}" onclick="openLeadModal({{ json_encode($lead) }})">
                             <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
                             <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
                             <div class="mt-2.5 flex justify-between items-center text-[11px]">
@@ -229,12 +217,12 @@
             <!-- Lost -->
             <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
                 <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-rose-400 text-sm flex items-center gap-1.5">❌ Lost</h3>
+                    <h3 class="font-bold text-rose-400 text-sm">❌ Lost</h3>
                     <span class="text-xs bg-rose-400/20 text-rose-300 px-2 py-0.5 rounded-full font-bold">{{ $pipeline['lost']->count() }}</span>
                 </div>
                 <div id="lost" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="lost">
                     @foreach($pipeline['lost'] as $lead)
-                        <div class="kanban-card bg-slate-800/60 p-3.5 rounded-xl border-l-4 border-l-rose-500 border-slate-700 shadow opacity-75 cursor-grab active:cursor-grabbing hover:border-rose-400/50 transition" data-id="{{ $lead->id }}">
+                        <div class="kanban-card bg-slate-800/60 p-3.5 rounded-xl border-l-4 border-l-rose-500 border-slate-700 shadow opacity-75 cursor-grab active:cursor-grabbing hover:border-rose-400/50 transition" data-id="{{ $lead->id }}" onclick="openLeadModal({{ json_encode($lead) }})">
                             <div class="text-xs font-bold text-slate-300">{{ $lead->name }}</div>
                             <div class="text-[11px] text-slate-500 truncate mt-0.5">{{ $lead->email }}</div>
                             <div class="mt-2.5 flex justify-between items-center text-[11px]">
@@ -250,9 +238,64 @@
 
     </div>
 
+    <!-- POPUP MODAL: Lead Details & Notes -->
+    <div id="leadModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[#1e293b] border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            
+            <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <div>
+                    <h3 id="modalName" class="text-lg font-bold text-white">Lead Details</h3>
+                    <p id="modalEmail" class="text-xs text-slate-400"></p>
+                </div>
+                <button onclick="closeLeadModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2 py-1">✕</button>
+            </div>
+
+            <form id="modalUpdateForm" method="POST" class="p-5 space-y-4">
+                @csrf
+                <!-- Customer Message Display -->
+                <div>
+                    <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Customer Inquiry Message</label>
+                    <div id="modalMessage" class="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs text-slate-200 whitespace-pre-wrap max-h-32 overflow-y-auto"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Deal Value ($)</label>
+                        <input type="number" name="deal_value" id="modalDealValue" step="10" placeholder="0"
+                               class="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-indigo-400 font-bold focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Priority</label>
+                        <select name="priority" id="modalPriority" class="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Admin Internal Private Notes -->
+                <div>
+                    <label class="block text-[11px] uppercase tracking-wider font-semibold text-amber-400 mb-1">📝 Internal Staff / Admin Notes</label>
+                    <textarea name="internal_notes" id="modalNotes" rows="3" placeholder="e.g. Called customer at 3 PM, requested a 10% discount on final quote..."
+                              class="w-full p-3 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeLeadModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-md">
+                        Save Notes & Updates
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
-        // Switch between Table and Pipeline
         function toggleView(view) {
             const tableView = document.getElementById('table-view');
             const pipelineView = document.getElementById('pipeline-view');
@@ -272,7 +315,6 @@
             }
         }
 
-        // Live Table Search
         function searchTable() {
             let input = document.getElementById('searchInput').value.toLowerCase();
             let rows = document.querySelectorAll('#leadsTableBody tr');
@@ -282,7 +324,24 @@
             });
         }
 
-        // Initialize SortableJS for Drag & Drop
+        // Modal Open / Close Logic
+        function openLeadModal(lead) {
+            document.getElementById('modalName').innerText = lead.name;
+            document.getElementById('modalEmail').innerText = lead.email + (lead.phone ? ' • ' + lead.phone : '');
+            document.getElementById('modalMessage').innerText = lead.message;
+            document.getElementById('modalDealValue').value = lead.deal_value || 0;
+            document.getElementById('modalNotes').value = lead.internal_notes || '';
+            document.getElementById('modalPriority').value = lead.priority || 'Medium';
+
+            document.getElementById('modalUpdateForm').action = `/messages/${lead.id}/update-details`;
+            document.getElementById('leadModal').classList.remove('hidden');
+        }
+
+        function closeLeadModal() {
+            document.getElementById('leadModal').classList.add('hidden');
+        }
+
+        // SortableJS Drag & Drop
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.kanban-column').forEach(column => {
                 new Sortable(column, {
@@ -301,7 +360,7 @@
                             },
                             body: JSON.stringify({ status: targetStatus })
                         }).then(res => res.json()).then(data => {
-                            console.log('Status updated successfully:', data);
+                            console.log('Status updated:', data);
                         });
                     }
                 });
