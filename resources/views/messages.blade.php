@@ -588,5 +588,76 @@
         });
         @endif
     </script>
+    <!-- Unified CRM Action Modal -->
+<div id="crmActionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl p-6 text-slate-100">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                ✉️ Quick Reply & Notes
+            </h3>
+            <button type="button" onclick="closeReplyModal()" class="text-slate-400 hover:text-white text-xl">✕</button>
+        </div>
+
+        <form id="leadReplyForm" method="POST" action="/crm/leads/reply">
+            @csrf
+            <input type="hidden" name="lead_id" id="modalLeadId">
+
+            <div class="mb-3">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Pre-made Email Templates</label>
+                <select id="templateSelector" onchange="applyTemplate(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <option value="">-- Select Template --</option>
+                    <option value="pricing">💼 Pricing & Quotation</option>
+                    <option value="followup">⏰ 2nd Follow-up</option>
+                    <option value="meeting">📅 Schedule Discovery Call</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Email Body</label>
+                <textarea name="message" id="modalMessage" rows="4" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="Type response here..."></textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Private Internal Notes</label>
+                <textarea name="internal_notes" id="modalNotes" rows="2" class="w-full bg-slate-800/60 border border-slate-700 rounded-lg p-2 text-xs text-amber-300 placeholder-slate-500 focus:outline-none focus:border-amber-500" placeholder="Add private notes for team..."></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeReplyModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg text-sm shadow">Send Email & Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const templates = {
+    pricing: "Hi {name},\n\nThank you for reaching out to LeadDesk CRM! Here are our pricing packages. Let us know when you would like to proceed.",
+    followup: "Hi {name},\n\nI just wanted to follow up on our previous conversation regarding your inquiry. Please let me know if you have any questions!",
+    meeting: "Hi {name},\n\nWe would love to set up a quick 10-minute discovery call to discuss your requirements. What time works best for you this week?"
+};
+
+let currentLeadName = "";
+
+function openReplyModal(id, name, email, notes) {
+    currentLeadName = name;
+    document.getElementById('modalLeadId').value = id;
+    document.getElementById('modalNotes').value = notes || '';
+    document.getElementById('modalMessage').value = '';
+    document.getElementById('templateSelector').value = '';
+    document.getElementById('crmActionModal').classList.remove('hidden');
+}
+
+function closeReplyModal() {
+    document.getElementById('crmActionModal').classList.add('hidden');
+}
+
+function applyTemplate(type) {
+    if (templates[type]) {
+        let msg = templates[type].replace('{name}', currentLeadName);
+        document.getElementById('modalMessage').value = msg;
+    }
+}
+</script>
 </body>
 </html>
