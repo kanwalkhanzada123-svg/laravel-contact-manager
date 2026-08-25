@@ -114,20 +114,28 @@
             </div>
         </div>
 
+        <!-- Priority Filters & Search Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-[#1e293b] p-3 rounded-2xl border border-slate-800">
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400 font-semibold ml-2">Priority:</span>
+                <button onclick="filterPriority('all')" class="priority-btn active px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition" data-prio="all">All</button>
+                <button onclick="filterPriority('High')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition" data-prio="High">🔥 High</button>
+                <button onclick="filterPriority('Medium')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition" data-prio="Medium">⚡ Medium</button>
+                <button onclick="filterPriority('Low')" class="priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition" data-prio="Low">☕ Low</button>
+            </div>
+            <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search leads, notes..." 
+                   class="w-full sm:w-64 px-3.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500">
+        </div>
+
         <!-- TABLE VIEW -->
         <div id="table-view" class="bg-[#1e293b] rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
-            <div class="p-4 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center gap-3">
-                <h2 class="font-bold text-white text-base">Inquiries Inbox</h2>
-                <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search inquiries & notes..." 
-                       class="w-full md:w-64 px-3.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500">
-            </div>
-
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-300">
                     <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
                         <tr>
                             <th class="p-3.5">Name</th>
                             <th class="p-3.5">Contact</th>
+                            <th class="p-3.5">Priority</th>
                             <th class="p-3.5">Message</th>
                             <th class="p-3.5">Deal Value</th>
                             <th class="p-3.5">Status</th>
@@ -137,11 +145,19 @@
                     </thead>
                     <tbody id="leadsTableBody" class="divide-y divide-slate-800/60">
                         @forelse($contacts as $contact)
-                            <tr class="hover:bg-slate-800/60 transition cursor-pointer" onclick="openLeadModal({{ json_encode($contact) }})">
+                            <tr class="lead-item-row hover:bg-slate-800/60 transition cursor-pointer" data-priority="{{ $contact->priority ?? 'Medium' }}" onclick="openLeadModal({{ json_encode($contact) }})">
                                 <td class="p-3.5 font-semibold text-white">{{ $contact->name }}</td>
                                 <td class="p-3.5">
                                     <div>{{ $contact->email }}</div>
                                     <div class="text-[11px] text-slate-400">{{ $contact->phone ?? 'N/A' }}</div>
+                                </td>
+                                <td class="p-3.5">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase
+                                        {{ ($contact->priority ?? 'Medium') == 'High' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30' : '' }}
+                                        {{ ($contact->priority ?? 'Medium') == 'Medium' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : '' }}
+                                        {{ ($contact->priority ?? 'Medium') == 'Low' ? 'bg-slate-700 text-slate-300 border border-slate-600' : '' }}">
+                                        {{ $contact->priority ?? 'Medium' }}
+                                    </span>
                                 </td>
                                 <td class="p-3.5 max-w-xs truncate text-slate-300">{{ $contact->message }}</td>
                                 <td class="p-3.5 text-indigo-400 font-bold">${{ number_format($contact->deal_value ?? 0) }}</td>
@@ -165,7 +181,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="p-6 text-center text-slate-500">No leads found.</td>
+                                <td colspan="8" class="p-6 text-center text-slate-500">No leads found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -190,8 +206,16 @@
                 </div>
                 <div id="pending" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="pending">
                     @foreach($pipeline['pending'] as $lead)
-                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}" onclick="openLeadModal({{ json_encode($lead) }})">
-                            <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                        <div class="kanban-card lead-item-row bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}" data-priority="{{ $lead->priority ?? 'Medium' }}" onclick="openLeadModal({{ json_encode($lead) }})">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded
+                                    {{ ($lead->priority ?? 'Medium') == 'High' ? 'bg-rose-500/20 text-rose-400' : '' }}
+                                    {{ ($lead->priority ?? 'Medium') == 'Medium' ? 'bg-amber-500/20 text-amber-400' : '' }}
+                                    {{ ($lead->priority ?? 'Medium') == 'Low' ? 'bg-slate-700 text-slate-300' : '' }}">
+                                    {{ $lead->priority ?? 'Medium' }}
+                                </span>
+                            </div>
                             <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
                             <div class="mt-2.5 flex justify-between items-center text-[11px]">
                                 <span class="text-indigo-400 font-bold">${{ number_format($lead->deal_value ?? 0) }}</span>
@@ -210,8 +234,16 @@
                 </div>
                 <div id="replied" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="replied">
                     @foreach($pipeline['replied'] as $lead)
-                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}" onclick="openLeadModal({{ json_encode($lead) }})">
-                            <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                        <div class="kanban-card lead-item-row bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}" data-priority="{{ $lead->priority ?? 'Medium' }}" onclick="openLeadModal({{ json_encode($lead) }})">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded
+                                    {{ ($lead->priority ?? 'Medium') == 'High' ? 'bg-rose-500/20 text-rose-400' : '' }}
+                                    {{ ($lead->priority ?? 'Medium') == 'Medium' ? 'bg-amber-500/20 text-amber-400' : '' }}
+                                    {{ ($lead->priority ?? 'Medium') == 'Low' ? 'bg-slate-700 text-slate-300' : '' }}">
+                                    {{ $lead->priority ?? 'Medium' }}
+                                </span>
+                            </div>
                             <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
                             <div class="mt-2.5 flex justify-between items-center text-[11px]">
                                 <span class="text-indigo-400 font-bold">${{ number_format($lead->deal_value ?? 0) }}</span>
@@ -230,8 +262,16 @@
                 </div>
                 <div id="won" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="won">
                     @foreach($pipeline['won'] as $lead)
-                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border-l-4 border-l-emerald-500 border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-emerald-400/50 transition" data-id="{{ $lead->id }}" onclick="openLeadModal({{ json_encode($lead) }})">
-                            <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                        <div class="kanban-card lead-item-row bg-slate-800 p-3.5 rounded-xl border-l-4 border-l-emerald-500 border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-emerald-400/50 transition" data-id="{{ $lead->id }}" data-priority="{{ $lead->priority ?? 'Medium' }}" onclick="openLeadModal({{ json_encode($lead) }})">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded
+                                    {{ ($lead->priority ?? 'Medium') == 'High' ? 'bg-rose-500/20 text-rose-400' : '' }}
+                                    {{ ($lead->priority ?? 'Medium') == 'Medium' ? 'bg-amber-500/20 text-amber-400' : '' }}
+                                    {{ ($lead->priority ?? 'Medium') == 'Low' ? 'bg-slate-700 text-slate-300' : '' }}">
+                                    {{ $lead->priority ?? 'Medium' }}
+                                </span>
+                            </div>
                             <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
                             <div class="mt-2.5 flex justify-between items-center text-[11px]">
                                 <span class="text-emerald-400 font-bold">${{ number_format($lead->deal_value ?? 0) }}</span>
@@ -250,8 +290,16 @@
                 </div>
                 <div id="lost" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="lost">
                     @foreach($pipeline['lost'] as $lead)
-                        <div class="kanban-card bg-slate-800/60 p-3.5 rounded-xl border-l-4 border-l-rose-500 border-slate-700 shadow opacity-75 cursor-grab active:cursor-grabbing hover:border-rose-400/50 transition" data-id="{{ $lead->id }}" onclick="openLeadModal({{ json_encode($lead) }})">
-                            <div class="text-xs font-bold text-slate-300">{{ $lead->name }}</div>
+                        <div class="kanban-card lead-item-row bg-slate-800/60 p-3.5 rounded-xl border-l-4 border-l-rose-500 border-slate-700 shadow opacity-75 cursor-grab active:cursor-grabbing hover:border-rose-400/50 transition" data-id="{{ $lead->id }}" data-priority="{{ $lead->priority ?? 'Medium' }}" onclick="openLeadModal({{ json_encode($lead) }})">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="text-xs font-bold text-slate-300">{{ $lead->name }}</div>
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded
+                                    {{ ($lead->priority ?? 'Medium') == 'High' ? 'bg-rose-500/20 text-rose-400' : '' }}
+                                    {{ ($lead->priority ?? 'Medium') == 'Medium' ? 'bg-amber-500/20 text-amber-400' : '' }}
+                                    {{ ($lead->priority ?? 'Medium') == 'Low' ? 'bg-slate-700 text-slate-300' : '' }}">
+                                    {{ $lead->priority ?? 'Medium' }}
+                                </span>
+                            </div>
                             <div class="text-[11px] text-slate-500 truncate mt-0.5">{{ $lead->email }}</div>
                             <div class="mt-2.5 flex justify-between items-center text-[11px]">
                                 <span class="text-slate-400 font-bold">${{ number_format($lead->deal_value ?? 0) }}</span>
@@ -390,6 +438,26 @@
                 navDetails.className = "pb-2 border-b-2 border-indigo-500 text-white transition";
                 navEmail.className = "pb-2 border-b-2 border-transparent text-slate-400 hover:text-white transition";
             }
+        }
+
+        function filterPriority(prio) {
+            document.querySelectorAll('.priority-btn').forEach(btn => {
+                if (btn.getAttribute('data-prio') === prio) {
+                    btn.className = "priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white transition shadow-sm";
+                } else {
+                    btn.className = "priority-btn px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 transition";
+                }
+            });
+
+            const rows = document.querySelectorAll('.lead-item-row');
+            rows.forEach(item => {
+                const itemPrio = item.getAttribute('data-priority');
+                if (prio === 'all' || itemPrio === prio) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
         }
 
         function searchTable() {
