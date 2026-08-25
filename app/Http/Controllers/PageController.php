@@ -43,9 +43,16 @@ class PageController extends Controller
 
     public function messages()
     {
-        // paginate(10) use kiya hai taake hasPages() perfectly kaam kare
         $contacts = Contact::latest()->paginate(10);
         $leads = $contacts;
+        
+        $allLeads = Contact::all();
+        $pipeline = [
+            'pending' => $allLeads->where('status', 'pending'),
+            'replied' => $allLeads->where('status', 'replied'),
+            'won'     => $allLeads->where('status', 'won'),
+            'lost'    => $allLeads->where('status', 'lost'),
+        ];
 
         $stats = [
             'total' => Contact::count(),
@@ -59,7 +66,7 @@ class PageController extends Controller
             'total_value' => Contact::sum('deal_value') ?? 0,
         ];
 
-        return view('messages', compact('contacts', 'leads', 'stats'));
+        return view('messages', compact('contacts', 'leads', 'stats', 'pipeline'));
     }
 
     public function exportCsv(): StreamedResponse

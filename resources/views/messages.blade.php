@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>LeadDesk - CRM Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,653 +10,303 @@
     <script>
         tailwind.config = {
             darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        cardBg: '#1e293b',
+                    }
+                }
+            }
         }
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-200">
+<body class="bg-[#0f172a] text-gray-200 font-sans min-h-screen p-4 md:p-8">
 
-    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md shadow-indigo-200 dark:shadow-none">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- Top Header Navigation -->
+        <header class="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#1e293b] p-4 rounded-2xl border border-slate-800 shadow-md">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
                     LD
                 </div>
                 <div>
-                    <h1 class="text-base font-bold text-slate-900 dark:text-white leading-none">LeadDesk CRM</h1>
-                    <span class="text-xs text-slate-400 font-medium">Inquiry & Pipeline Management</span>
+                    <h1 class="text-xl font-bold text-white tracking-wide">LeadDesk CRM</h1>
+                    <p class="text-xs text-slate-400">Inquiry & Pipeline Management</p>
                 </div>
             </div>
-            
-            <div class="flex items-center space-x-3">
+
+            <div class="flex items-center gap-3">
                 <!-- View Switcher -->
-                <div class="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex items-center space-x-1">
-                    <a href="{{ route('messages.index', array_merge(request()->query(), ['view' => 'table'])) }}" 
-                       class="px-2.5 py-1 text-xs font-semibold rounded {{ ($viewType ?? 'table') === 'table' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900' }}">
-                       📋 Table
-                    </a>
-                    <a href="{{ route('messages.index', array_merge(request()->query(), ['view' => 'kanban'])) }}" 
-                       class="px-2.5 py-1 text-xs font-semibold rounded {{ ($viewType ?? 'table') === 'kanban' ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900' }}">
-                       📌 Pipeline
-                    </a>
+                <div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-700">
+                    <button onclick="toggleView('table')" id="btn-table" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition">📋 Table</button>
+                    <button onclick="toggleView('pipeline')" id="btn-pipeline" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">📌 Pipeline</button>
                 </div>
 
-                <button onclick="toggleDarkMode()" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Toggle Dark Mode">
-                    <span id="themeIcon">🌙</span>
-                </button>
-                <a href="{{ route('messages.export.csv') }}" class="inline-flex items-center px-3.5 py-2 border border-slate-300 dark:border-slate-600 text-xs font-semibold rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 transition shadow-sm">
-                    <svg class="w-4 h-4 mr-1.5 text-slate-500 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Export CSV
+                <a href="{{ route('messages.export.csv') }}" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                    📥 Export CSV
                 </a>
-                <form action="{{ route('logout') }}" method="POST" class="inline">
+
+                <form action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
-                    <button type="submit" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/40 text-xs font-semibold text-slate-600 dark:text-slate-300 rounded-lg transition">
+                    <button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition">
                         Logout
                     </button>
                 </form>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-
-        @if(session('success'))
-            <div class="p-4 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center shadow-sm">
-                <svg class="w-5 h-5 mr-3 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="text-sm font-medium">{{ session('success') }}</span>
-            </div>
-        @endif
-
-        <!-- Stat Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+        <!-- Stats Overview Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800 flex justify-between items-center shadow-sm">
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Leads</p>
-                    <h3 class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ $stats['total'] }}</h3>
+                    <p class="text-xs font-semibold text-slate-400 uppercase">Total Leads</p>
+                    <h2 class="text-2xl font-black text-white mt-1">{{ $stats['total'] }}</h2>
                 </div>
-                <div class="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-lg font-bold">📋</div>
+                <div class="text-2xl">📋</div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800 flex justify-between items-center shadow-sm">
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pending</p>
-                    <h3 class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ $stats['pending'] }}</h3>
+                    <p class="text-xs font-semibold text-amber-400 uppercase">Pending</p>
+                    <h2 class="text-2xl font-black text-amber-400 mt-1">{{ $stats['pending'] }}</h2>
                 </div>
-                <div class="w-10 h-10 bg-amber-50 dark:bg-amber-950/60 rounded-lg flex items-center justify-center text-amber-600 dark:text-amber-400 text-lg font-bold">⏳</div>
+                <div class="text-2xl">⏳</div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800 flex justify-between items-center shadow-sm">
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Replied</p>
-                    <h3 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ $stats['replied'] }}</h3>
+                    <p class="text-xs font-semibold text-emerald-400 uppercase">Replied</p>
+                    <h2 class="text-2xl font-black text-emerald-400 mt-1">{{ $stats['replied'] }}</h2>
                 </div>
-                <div class="w-10 h-10 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-lg font-bold">✅</div>
+                <div class="text-2xl">✅</div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800 flex justify-between items-center shadow-sm">
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Starred</p>
-                    <h3 class="text-2xl font-bold text-yellow-500 mt-1">{{ $stats['starred'] }}</h3>
+                    <p class="text-xs font-semibold text-indigo-400 uppercase">Won Deals</p>
+                    <h2 class="text-2xl font-black text-indigo-400 mt-1">{{ $stats['won'] }}</h2>
                 </div>
-                <div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-950/60 rounded-lg flex items-center justify-center text-yellow-500 text-lg font-bold">⭐</div>
+                <div class="text-2xl">🏆</div>
             </div>
 
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800 flex justify-between items-center shadow-sm col-span-2 sm:col-span-1">
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Today</p>
-                    <h3 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{{ $stats['today'] }}</h3>
+                    <p class="text-xs font-semibold text-sky-400 uppercase">Today's</p>
+                    <h2 class="text-2xl font-black text-sky-400 mt-1">{{ $stats['today'] }}</h2>
                 </div>
-                <div class="w-10 h-10 bg-blue-50 dark:bg-blue-950/60 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 text-lg font-bold">⚡</div>
+                <div class="text-2xl">⚡</div>
             </div>
         </div>
 
-        @if(($viewType ?? 'table') === 'kanban')
-            <!-- KANBAN PIPELINE VIEW -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
-                
-                <!-- Column: New Leads -->
-                <div class="bg-slate-100 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <div class="flex items-center justify-between mb-3 px-1">
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">📥 New Leads</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold">{{ count($kanbanLeads['new']) }}</span>
-                    </div>
-                    <div id="new" class="kanban-column space-y-3 min-h-[400px]">
-                        @foreach($kanbanLeads['new'] as $lead)
-                            @include('partials.kanban-card', ['lead' => $lead])
-                        @endforeach
-                    </div>
-                </div>
-
-                <!-- Column: Contacted / In Negotiation -->
-                <div class="bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/40">
-                    <div class="flex items-center justify-between mb-3 px-1">
-                        <span class="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">💬 Contacted</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-amber-200/60 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-bold">{{ count($kanbanLeads['contacted']) }}</span>
-                    </div>
-                    <div id="contacted" class="kanban-column space-y-3 min-h-[400px]">
-                        @foreach($kanbanLeads['contacted'] as $lead)
-                            @include('partials.kanban-card', ['lead' => $lead])
-                        @endforeach
-                    </div>
-                </div>
-
-                <!-- Column: Deal Won / Converted -->
-                <div class="bg-emerald-50/50 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/40">
-                    <div class="flex items-center justify-between mb-3 px-1">
-                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">🎉 Deal Won</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-200/60 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold">{{ count($kanbanLeads['won']) }}</span>
-                    </div>
-                    <div id="won" class="kanban-column space-y-3 min-h-[400px]">
-                        @foreach($kanbanLeads['won'] as $lead)
-                            @include('partials.kanban-card', ['lead' => $lead])
-                        @endforeach
-                    </div>
-                </div>
-
-                <!-- Column: Closed / Lost -->
-                <div class="bg-red-50/50 dark:bg-red-950/20 p-4 rounded-2xl border border-red-200 dark:border-red-900/40">
-                    <div class="flex items-center justify-between mb-3 px-1">
-                        <span class="text-xs font-bold uppercase tracking-wider text-red-800 dark:text-red-400">❌ Lost / Closed</span>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-red-200/60 dark:bg-red-900/60 text-red-800 dark:text-red-300 font-bold">{{ count($kanbanLeads['lost']) }}</span>
-                    </div>
-                    <div id="lost" class="kanban-column space-y-3 min-h-[400px]">
-                        @foreach($kanbanLeads['lost'] as $lead)
-                            @include('partials.kanban-card', ['lead' => $lead])
-                        @endforeach
-                    </div>
-                </div>
-
-            </div>
-        @else
-            <!-- Analytics Visual Chart Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">Inquiry Overview & Trends</h3>
-                        <span class="text-xs text-slate-400">Live Status Metrics</span>
-                    </div>
-                    <div class="h-56">
-                        <canvas id="leadsBarChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-1">Conversion Ratio</h3>
-                        <p class="text-xs text-slate-400 mb-3">Pending vs Replied</p>
-                        <div class="h-44 flex items-center justify-center">
-                            <canvas id="leadsDoughnutChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="flex justify-around text-center pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
-                        <div>
-                            <span class="text-amber-500 font-bold block">{{ $stats['pending'] }}</span>
-                            <span class="text-slate-400">Pending</span>
-                        </div>
-                        <div>
-                            <span class="text-emerald-500 font-bold block">{{ $stats['replied'] }}</span>
-                            <span class="text-slate-400">Replied</span>
-                        </div>
-                    </div>
-                </div>
+        <!-- 1. TABLE VIEW (Default) -->
+        <div id="table-view" class="bg-[#1e293b] rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+            <div class="p-4 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center gap-3">
+                <h2 class="font-bold text-white text-base">Inquiries Inbox</h2>
+                <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search inquiries & notes..." 
+                       class="w-full md:w-64 px-3.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500">
             </div>
 
-            <!-- Filter & Search Controls -->
-            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div class="flex items-center space-x-2 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-xl">
-                    <a href="{{ route('messages.index') }}" 
-                       class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition {{ !request('status') ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900' }}">
-                        All ({{ $stats['total'] }})
-                    </a>
-                    <a href="{{ route('messages.index', ['status' => 'pending']) }}" 
-                       class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition {{ request('status') === 'pending' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900' }}">
-                        Pending ({{ $stats['pending'] }})
-                    </a>
-                    <a href="{{ route('messages.index', ['status' => 'replied']) }}" 
-                       class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition {{ request('status') === 'replied' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900' }}">
-                        Replied ({{ $stats['replied'] }})
-                    </a>
-                    <a href="{{ route('messages.index', ['status' => 'starred']) }}" 
-                       class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition {{ request('status') === 'starred' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900' }}">
-                        ⭐ Starred ({{ $stats['starred'] }})
-                    </a>
-                </div>
-
-                <div class="flex items-center space-x-3 w-full md:w-auto">
-                    <button type="button" id="bulkDeleteBtn" onclick="submitBulkDelete()" class="hidden px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-sm transition">
-                        Delete Selected (<span id="selectedCount">0</span>)
-                    </button>
-
-                    <form action="{{ route('messages.index') }}" method="GET" class="w-full md:w-80 flex items-center">
-                        @if(request('status'))
-                            <input type="hidden" name="status" value="{{ request('status') }}">
-                        @endif
-                        <div class="relative w-full">
-                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search inquiries & notes..." 
-                                class="w-full pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
-                            <svg class="h-4 w-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Table View -->
-            <form id="bulkForm" action="{{ route('messages.bulkDelete') }}" method="POST">
-                @csrf
-                <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                <th class="py-3.5 px-4 w-10 text-center">
-                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                </th>
-                                <th class="py-3.5 px-2 w-8 text-center"></th>
-                                <th class="py-3.5 px-4">Contact</th>
-                                <th class="py-3.5 px-4">Status</th>
-                                <th class="py-3.5 px-4">Message & Admin Notes</th>
-                                <th class="py-3.5 px-4">Date</th>
-                                <th class="py-3.5 px-4 text-right">Actions</th>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                        <tr>
+                            <th class="p-3.5">Name</th>
+                            <th class="p-3.5">Contact</th>
+                            <th class="p-3.5">Message</th>
+                            <th class="p-3.5">Status</th>
+                            <th class="p-3.5">Date</th>
+                            <th class="p-3.5 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leadsTableBody" class="divide-y divide-slate-800/60">
+                        @forelse($contacts as $contact)
+                            <tr class="hover:bg-slate-800/40 transition">
+                                <td class="p-3.5 font-semibold text-white">{{ $contact->name }}</td>
+                                <td class="p-3.5">
+                                    <div>{{ $contact->email }}</div>
+                                    <div class="text-[11px] text-slate-400">{{ $contact->phone ?? 'N/A' }}</div>
+                                </td>
+                                <td class="p-3.5 max-w-xs truncate text-slate-300">{{ $contact->message }}</td>
+                                <td class="p-3.5">
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase
+                                        {{ $contact->status == 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : '' }}
+                                        {{ $contact->status == 'replied' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : '' }}
+                                        {{ $contact->status == 'won' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : '' }}
+                                        {{ $contact->status == 'lost' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : '' }}">
+                                        {{ $contact->status }}
+                                    </span>
+                                </td>
+                                <td class="p-3.5 text-slate-400">{{ $contact->created_at ? $contact->created_at->format('M d, Y') : '-' }}</td>
+                                <td class="p-3.5 text-right">
+                                    <form action="{{ route('messages.destroy', $contact->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete message?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-rose-400 hover:text-rose-300 font-semibold text-xs">Delete</button>
+                                    </form>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
-                            @forelse($contacts as $contact)
-                                <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition">
-                                    <td class="py-4 px-4 text-center align-top">
-                                        <input type="checkbox" name="ids[]" value="{{ $contact->id }}" onchange="updateSelectedCount()" class="row-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                    </td>
-                                    <td class="py-4 px-2 text-center align-top">
-                                        <button type="button" onclick="event.preventDefault(); document.getElementById('star-form-{{ $contact->id }}').submit();" class="text-base transition hover:scale-125">
-                                            {{ $contact->is_starred ? '⭐' : '☆' }}
-                                        </button>
-                                    </td>
-                                    <td class="py-4 px-4 align-top">
-                                        <div class="font-semibold text-slate-900 dark:text-white">{{ $contact->name }}</div>
-                                        <a href="mailto:{{ $contact->email }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{{ $contact->email }}</a>
-                                    </td>
-                                    <td class="py-4 px-4 align-top">
-                                        @if($contact->status === 'replied')
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                                ● Replied
-                                            </span>
-                                        @else
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                                ● Pending
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td class="py-4 px-4 align-top text-slate-600 dark:text-slate-300 max-w-sm">
-                                        <p class="line-clamp-2 text-xs text-slate-700 dark:text-slate-200">{{ $contact->message }}</p>
-                                        
-                                        <div class="mt-2 bg-slate-100 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60 flex items-start justify-between gap-2">
-                                            <p class="text-xs text-slate-500 dark:text-slate-400 italic">
-                                                <span class="font-semibold not-italic text-slate-700 dark:text-slate-300">Note:</span> {{ $contact->admin_notes ?: 'No internal notes added.' }}
-                                            </p>
-                                            <button type="button" onclick="openNoteModal('{{ $contact->id }}', '{{ addslashes($contact->admin_notes) }}')" class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0">
-                                                Edit
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td class="py-4 px-4 align-top text-xs text-slate-400 whitespace-nowrap">
-                                        {{ $contact->created_at->format('M d, Y h:i A') }}
-                                    </td>
-                                    <td class="py-4 px-4 align-top text-right whitespace-nowrap space-x-2">
-                                        <button type="button" onclick="openReplyModal('{{ $contact->id }}', '{{ addslashes($contact->name) }}', '{{ addslashes($contact->email) }}')" 
-                                            class="inline-flex items-center px-2.5 py-1.5 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-semibold rounded-md transition">
-                                            Reply
-                                        </button>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="py-12 text-center text-slate-400 text-sm">
-                                        Koi inquiries nahi milein.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="p-6 text-center text-slate-500">No leads found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-                    @if(isset($contacts) && $contacts->hasPages())
-                        <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-                            {{ $contacts->links() }}
+            @if(method_exists($contacts, 'hasPages') && $contacts->hasPages())
+                <div class="p-4 border-t border-slate-800">
+                    {{ $contacts->links() }}
+                </div>
+            @endif
+        </div>
+
+        <!-- 2. KANBAN PIPELINE VIEW (Drag & Drop) -->
+        <div id="pipeline-view" class="hidden grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- Pending -->
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-amber-400 text-sm flex items-center gap-1.5">⏳ Pending</h3>
+                    <span class="text-xs bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">{{ $pipeline['pending']->count() }}</span>
+                </div>
+                <div id="pending" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="pending">
+                    @foreach($pipeline['pending'] as $lead)
+                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}">
+                            <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                            <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
+                            <div class="mt-2.5 flex justify-between items-center text-[11px]">
+                                <span class="text-indigo-400 font-bold">${{ number_format($lead->deal_value ?? 0) }}</span>
+                                <span class="text-slate-500">{{ $lead->created_at ? $lead->created_at->format('M d') : '' }}</span>
+                            </div>
                         </div>
-                    @endif
+                    @endforeach
                 </div>
-            </form>
-        @endif
-
-        @if(isset($contacts))
-            @foreach($contacts as $contact)
-                <form id="star-form-{{ $contact->id }}" action="{{ route('messages.toggleStar', $contact->id) }}" method="POST" class="hidden">
-                    @csrf
-                </form>
-            @endforeach
-        @endif
-    </main>
-
-    <!-- Reply Modal -->
-    <div id="replyModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-xl rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-                <div>
-                    <h3 class="font-bold text-slate-900 dark:text-white text-base">Send Reply</h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">To: <span id="modalCustomerName" class="font-medium"></span> (<span id="modalCustomerEmail" class="text-indigo-600"></span>)</p>
-                </div>
-                <button onclick="closeReplyModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
             </div>
 
-            <form id="replyForm" method="POST" action="" class="p-6 space-y-4">
-                @csrf
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">⚡ Quick Templates</label>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" onclick="insertTemplate('quotation')" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 text-[11px] font-medium rounded-md border border-slate-200 dark:border-slate-600">
-                            📄 Price Quotation
-                        </button>
-                        <button type="button" onclick="insertTemplate('meeting')" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 text-[11px] font-medium rounded-md border border-slate-200 dark:border-slate-600">
-                            📅 Schedule Call
-                        </button>
-                        <button type="button" onclick="insertTemplate('resolved')" class="px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 text-[11px] font-medium rounded-md border border-slate-200 dark:border-slate-600">
-                            ✅ Inquiry Resolved
-                        </button>
-                    </div>
+            <!-- Replied / In Discussion -->
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-blue-400 text-sm flex items-center gap-1.5">💬 Discussion</h3>
+                    <span class="text-xs bg-blue-400/20 text-blue-300 px-2 py-0.5 rounded-full font-bold">{{ $pipeline['replied']->count() }}</span>
                 </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Subject</label>
-                    <input type="text" name="subject" id="modalSubject" required 
-                        class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <div id="replied" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="replied">
+                    @foreach($pipeline['replied'] as $lead)
+                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-indigo-500/50 transition" data-id="{{ $lead->id }}">
+                            <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                            <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
+                            <div class="mt-2.5 flex justify-between items-center text-[11px]">
+                                <span class="text-indigo-400 font-bold">${{ number_format($lead->deal_value ?? 0) }}</span>
+                                <span class="text-slate-500">{{ $lead->created_at ? $lead->created_at->format('M d') : '' }}</span>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Your Response</label>
-                    <textarea name="message" id="modalMessageArea" rows="5" required 
-                        class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
-                </div>
-
-                <div class="flex items-center justify-end space-x-3 pt-2">
-                    <button type="button" onclick="closeReplyModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">Send Email Reply</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Note Modal -->
-    <div id="noteModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
-                <h3 class="font-bold text-slate-900 dark:text-white text-base">Internal Admin Note</h3>
-                <button onclick="closeNoteModal()" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
             </div>
 
-            <form id="noteForm" method="POST" action="" class="p-6 space-y-4">
-                @csrf
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Private Remarks</label>
-                    <textarea name="admin_notes" id="noteInput" rows="4" 
-                        class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+            <!-- Won -->
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-emerald-400 text-sm flex items-center gap-1.5">🏆 Won Deals</h3>
+                    <span class="text-xs bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">{{ $pipeline['won']->count() }}</span>
                 </div>
+                <div id="won" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="won">
+                    @foreach($pipeline['won'] as $lead)
+                        <div class="kanban-card bg-slate-800 p-3.5 rounded-xl border-l-4 border-l-emerald-500 border-slate-700 shadow cursor-grab active:cursor-grabbing hover:border-emerald-400/50 transition" data-id="{{ $lead->id }}">
+                            <div class="text-xs font-bold text-white">{{ $lead->name }}</div>
+                            <div class="text-[11px] text-slate-400 truncate mt-0.5">{{ $lead->email }}</div>
+                            <div class="mt-2.5 flex justify-between items-center text-[11px]">
+                                <span class="text-emerald-400 font-bold">${{ number_format($lead->deal_value ?? 0) }}</span>
+                                <span class="text-slate-500">{{ $lead->created_at ? $lead->created_at->format('M d') : '' }}</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
 
-                <div class="flex items-center justify-end space-x-3 pt-2">
-                    <button type="button" onclick="closeNoteModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-                    <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm">Save Note</button>
+            <!-- Lost -->
+            <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-rose-400 text-sm flex items-center gap-1.5">❌ Lost</h3>
+                    <span class="text-xs bg-rose-400/20 text-rose-300 px-2 py-0.5 rounded-full font-bold">{{ $pipeline['lost']->count() }}</span>
                 </div>
-            </form>
+                <div id="lost" class="kanban-column min-h-[380px] space-y-2.5 p-1 rounded-xl bg-slate-900/40" data-status="lost">
+                    @foreach($pipeline['lost'] as $lead)
+                        <div class="kanban-card bg-slate-800/60 p-3.5 rounded-xl border-l-4 border-l-rose-500 border-slate-700 shadow opacity-75 cursor-grab active:cursor-grabbing hover:border-rose-400/50 transition" data-id="{{ $lead->id }}">
+                            <div class="text-xs font-bold text-slate-300">{{ $lead->name }}</div>
+                            <div class="text-[11px] text-slate-500 truncate mt-0.5">{{ $lead->email }}</div>
+                            <div class="mt-2.5 flex justify-between items-center text-[11px]">
+                                <span class="text-slate-400 font-bold">${{ number_format($lead->deal_value ?? 0) }}</span>
+                                <span class="text-slate-500">{{ $lead->created_at ? $lead->created_at->format('M d') : '' }}</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
         </div>
+
     </div>
 
+    <!-- Scripts -->
     <script>
-        let currentRecipientName = '';
+        // Switch between Table and Pipeline
+        function toggleView(view) {
+            const tableView = document.getElementById('table-view');
+            const pipelineView = document.getElementById('pipeline-view');
+            const btnTable = document.getElementById('btn-table');
+            const btnPipeline = document.getElementById('btn-pipeline');
 
-        function openReplyModal(leadId, name, email) {
-            currentRecipientName = name;
-            document.getElementById('modalCustomerName').textContent = name;
-            document.getElementById('modalCustomerEmail').textContent = email;
-            document.getElementById('modalSubject').value = 'Re: Regarding your inquiry on LeadDesk';
-            document.getElementById('modalMessageArea').value = '';
-            document.getElementById('replyForm').action = '/messages/' + leadId + '/reply';
-            document.getElementById('replyModal').classList.remove('hidden');
-        }
-
-        function closeReplyModal() {
-            document.getElementById('replyModal').classList.add('hidden');
-        }
-
-        function insertTemplate(type) {
-            const subject = document.getElementById('modalSubject');
-            const textarea = document.getElementById('modalMessageArea');
-            if (type === 'quotation') {
-                subject.value = 'Quotation & Project Scope - LeadDesk';
-                textarea.value = `Hi ${currentRecipientName},\n\nThank you for reaching out to us. Based on your inquiry, we would love to share our pricing packages and project timeline with you.\n\nPlease let us know if you would like to proceed.\n\nBest regards,\nSupport Team`;
-            } else if (type === 'meeting') {
-                subject.value = 'Let\'s schedule a quick call - LeadDesk';
-                textarea.value = `Hi ${currentRecipientName},\n\nWe would love to discuss your requirements in detail over a brief 10-minute call. Please let us know your convenient time for this week.\n\nBest regards,\nSupport Team`;
-            } else if (type === 'resolved') {
-                subject.value = 'Update regarding your recent inquiry';
-                textarea.value = `Hi ${currentRecipientName},\n\nWe have looked into your query and the necessary updates have been made. Please feel free to reach out if you have any further questions.\n\nBest regards,\nSupport Team`;
-            }
-        }
-
-        function openNoteModal(leadId, noteText) {
-            document.getElementById('noteInput').value = noteText;
-            document.getElementById('noteForm').action = '/messages/' + leadId + '/notes';
-            document.getElementById('noteModal').classList.remove('hidden');
-        }
-
-        function closeNoteModal() {
-            document.getElementById('noteModal').classList.add('hidden');
-        }
-
-        function toggleSelectAll(master) {
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            checkboxes.forEach(cb => cb.checked = master.checked);
-            updateSelectedCount();
-        }
-
-        function updateSelectedCount() {
-            const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
-            const count = checkedBoxes.length;
-            const btn = document.getElementById('bulkDeleteBtn');
-            const countSpan = document.getElementById('selectedCount');
-            if (countSpan) countSpan.textContent = count;
-            if (btn) {
-                if (count > 0) btn.classList.remove('hidden');
-                else btn.classList.add('hidden');
-            }
-        }
-
-        function submitBulkDelete() {
-            if (confirm('Selected leads ko delete karna chahte hain?')) {
-                document.getElementById('bulkForm').submit();
-            }
-        }
-
-        function toggleDarkMode() {
-            const html = document.documentElement;
-            const icon = document.getElementById('themeIcon');
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                localStorage.theme = 'light';
-                icon.textContent = '🌙';
+            if (view === 'pipeline') {
+                tableView.classList.add('hidden');
+                pipelineView.classList.remove('hidden');
+                btnPipeline.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition";
+                btnTable.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
             } else {
-                html.classList.add('dark');
-                localStorage.theme = 'dark';
-                icon.textContent = '☀️';
+                tableView.classList.remove('hidden');
+                pipelineView.classList.add('hidden');
+                btnTable.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition";
+                btnPipeline.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
             }
         }
 
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-            document.getElementById('themeIcon').textContent = '☀️';
-        } else {
-            document.documentElement.classList.remove('dark');
-            document.getElementById('themeIcon').textContent = '🌙';
+        // Live Table Search
+        function searchTable() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let rows = document.querySelectorAll('#leadsTableBody tr');
+            rows.forEach(row => {
+                let text = row.innerText.toLowerCase();
+                row.style.display = text.includes(input) ? '' : 'none';
+            });
         }
 
-        // Initialize Live Chart if in Table View
-        @if(($viewType ?? 'table') === 'table')
-        document.addEventListener("DOMContentLoaded", function() {
-            const stats = {
-                total: {{ $stats['total'] }},
-                pending: {{ $stats['pending'] }},
-                replied: {{ $stats['replied'] }},
-                starred: {{ $stats['starred'] }},
-                today: {{ $stats['today'] }}
-            };
-
-            const barCanvas = document.getElementById('leadsBarChart');
-            if (barCanvas) {
-                new Chart(barCanvas.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['Total', 'Pending', 'Replied', 'Starred', "Today's"],
-                        datasets: [{
-                            label: 'Inquiries',
-                            data: [stats.total, stats.pending, stats.replied, stats.starred, stats.today],
-                            backgroundColor: [
-                                'rgba(79, 70, 229, 0.7)',
-                                'rgba(245, 158, 11, 0.7)',
-                                'rgba(16, 185, 129, 0.7)',
-                                'rgba(234, 179, 8, 0.7)',
-                                'rgba(59, 130, 246, 0.7)'
-                            ],
-                            borderRadius: 6,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: 'rgba(148, 163, 184, 0.1)' } },
-                            x: { grid: { display: false } }
-                        }
-                    }
-                });
-            }
-
-            const doughnutCanvas = document.getElementById('leadsDoughnutChart');
-            if (doughnutCanvas) {
-                new Chart(doughnutCanvas.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Pending', 'Replied'],
-                        datasets: [{
-                            data: [stats.pending || 1, stats.replied || 0],
-                            backgroundColor: ['#f59e0b', '#10b981'],
-                            borderWidth: 0,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        cutout: '75%'
-                    }
-                });
-            }
-        });
-        @endif
-
-        // Initialize Kanban Drag & Drop
-        @if(($viewType ?? 'table') === 'kanban')
-        document.addEventListener("DOMContentLoaded", function() {
-            const columns = document.querySelectorAll('.kanban-column');
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-            columns.forEach(column => {
+        // Initialize SortableJS for Drag & Drop
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.kanban-column').forEach(column => {
                 new Sortable(column, {
                     group: 'leads-pipeline',
-                    animation: 200,
-                    ghostClass: 'opacity-40',
+                    animation: 150,
+                    ghostClass: 'opacity-30',
                     onEnd: function (evt) {
                         const leadId = evt.item.getAttribute('data-id');
-                        const targetStage = evt.to.id;
+                        const targetStatus = evt.to.getAttribute('data-status');
 
-                        fetch(`/messages/${leadId}/update-stage`, {
+                        fetch(`/messages/${leadId}/update-status`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': csrfToken
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
                             },
-                            body: JSON.stringify({ stage: targetStage })
+                            body: JSON.stringify({ status: targetStatus })
+                        }).then(res => res.json()).then(data => {
+                            console.log('Status updated successfully:', data);
                         });
                     }
                 });
             });
         });
-        @endif
     </script>
-    <!-- Unified CRM Action Modal -->
-<div id="crmActionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl p-6 text-slate-100">
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
-            <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                ✉️ Quick Reply & Notes
-            </h3>
-            <button type="button" onclick="closeReplyModal()" class="text-slate-400 hover:text-white text-xl">✕</button>
-        </div>
-
-        <form id="leadReplyForm" method="POST" action="/crm/leads/reply">
-            @csrf
-            <input type="hidden" name="lead_id" id="modalLeadId">
-
-            <div class="mb-3">
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Pre-made Email Templates</label>
-                <select id="templateSelector" onchange="applyTemplate(this.value)" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-                    <option value="">-- Select Template --</option>
-                    <option value="pricing">💼 Pricing & Quotation</option>
-                    <option value="followup">⏰ 2nd Follow-up</option>
-                    <option value="meeting">📅 Schedule Discovery Call</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Email Body</label>
-                <textarea name="message" id="modalMessage" rows="4" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="Type response here..."></textarea>
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Private Internal Notes</label>
-                <textarea name="internal_notes" id="modalNotes" rows="2" class="w-full bg-slate-800/60 border border-slate-700 rounded-lg p-2 text-xs text-amber-300 placeholder-slate-500 focus:outline-none focus:border-amber-500" placeholder="Add private notes for team..."></textarea>
-            </div>
-
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeReplyModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg text-sm shadow">Send Email & Save</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-const templates = {
-    pricing: "Hi {name},\n\nThank you for reaching out to LeadDesk CRM! Here are our pricing packages. Let us know when you would like to proceed.",
-    followup: "Hi {name},\n\nI just wanted to follow up on our previous conversation regarding your inquiry. Please let me know if you have any questions!",
-    meeting: "Hi {name},\n\nWe would love to set up a quick 10-minute discovery call to discuss your requirements. What time works best for you this week?"
-};
-
-let currentLeadName = "";
-
-function openReplyModal(id, name, email, notes) {
-    currentLeadName = name;
-    document.getElementById('modalLeadId').value = id;
-    document.getElementById('modalNotes').value = notes || '';
-    document.getElementById('modalMessage').value = '';
-    document.getElementById('templateSelector').value = '';
-    document.getElementById('crmActionModal').classList.remove('hidden');
-}
-
-function closeReplyModal() {
-    document.getElementById('crmActionModal').classList.add('hidden');
-}
-
-function applyTemplate(type) {
-    if (templates[type]) {
-        let msg = templates[type].replace('{name}', currentLeadName);
-        document.getElementById('modalMessage').value = msg;
-    }
-}
-</script>
 </body>
 </html>

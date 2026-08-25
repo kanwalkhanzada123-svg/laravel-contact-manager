@@ -84,3 +84,16 @@ Route::delete('/messages/{id}', function ($id) {
 
 Route::post('/messages/{id}/reply', [PageController::class, 'reply'])->name('messages.reply');
 Route::post('/crm/leads/reply', [PageController::class, 'replyLead'])->name('leads.reply');
+
+// Update Status via Drag & Drop
+Route::post('/messages/{id}/update-status', function (Request $request, $id) {
+    $request->validate([
+        'status' => 'required|string|in:pending,replied,won,lost',
+    ]);
+
+    $contact = Contact::findOrFail($id);
+    $contact->status = $request->status;
+    $contact->save();
+
+    return response()->json(['success' => true, 'message' => 'Status updated successfully!']);
+})->name('messages.updateStatus');
