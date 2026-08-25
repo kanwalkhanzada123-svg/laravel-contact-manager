@@ -1,117 +1,186 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\PageController;
 use App\Models\Contact;
-use Illuminate\Http\Request;
 
+// Redirect home to contact page
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('contact.show');
 });
 
-Route::get('/about', [PageController::class, 'about'])->name('about');
-Route::get('/contact', [PageController::class, 'contact'])->name('contact');
-Route::post('/contact', [PageController::class, 'storeContact'])->name('contact.store');
-Route::post('/contact-submit', [PageController::class, 'storeContact'])->name('contact.submit');
+// Public Contact Form
+Route::get('/contact', function () {
+    return view('contact');
+})->name('contact.show');
 
-// Login Routes
+Route::post('/contact', function (Request $request) {
+    $validated = $request->validate([
+        'name'    => 'required|string|max:255',
+        'email'   => 'required|email|max:255',
+        'phone'   => 'nullable|string|max:20',
+        'message' => 'required|string',
+    ]);
+
+    Contact::create([
+        'name'           => $validated['name'],
+        'email'          => $validated['email'],
+        'phone'          => $validated['phone'] ?? null,
+        'message'        => $validated['message'],
+        'status'         => 'pending',
+        'deal_value'     => 0,
+        'internal_notes' => null,
+    ]);
+
+    return back()->with('success', 'Your inquiry has been submitted successfully!');
+})->name('contact.store');
+
+// Simple Authentication Routes
 Route::get('/login', function () {
+    if (Auth::check()) {
+        return redirect()->route('messages.index');
+    }
     return view('login');
 })->name('login');
 
 Route::post('/login', function (Request $request) {
     $credentials = $request->validate([
-        'email' => 'required|email',
+        'email'    => 'required|email',
         'password' => 'required',
     ]);
 
     if (Auth::attempt($credentials)) {
         $request->session()->regenerate();
-        return redirect()->intended('/messages');
+        return redirect()->route('messages.index');
     }
 
     return back()->withErrors([
-        'email' => 'Invalid credentials.',
+        'email' => 'The provided credentials do not match our records.',
     ]);
-});
+})->name('login.post');
 
-Route::post('/logout', function () {
+Route::post('/logout', function (Request $request) {
     Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-    return redirect('/login');
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect()->route('login');
 })->name('logout');
 
-// CRM / Dashboard Routes
-Route::get('/messages', [PageController::class, 'messages'])->name('messages.index');
-Route::get('/messages/dashboard', [PageController::class, 'messages'])->name('messages');
+// Authenticated CRM Dashboard Routes
+Route::middleware('auth')->group(function () {
 
-Route::get('/messages/export/csv', [PageController::class, 'exportCsv'])->name('messages.export.csv');
+    // Dashboard Overview & Pipeline
+    Route::get('/messages', function () {
+        $contacts = Contact::latest()->paginate(15);
 
-// Star / Unstar Route
-Route::post('/messages/{id}/toggle-star', function ($id) {
-    $contact = Contact::findOrFail($id);
-    if (\Illuminate\Support\Facades\Schema::hasColumn('contacts', 'is_starred')) {
-        $contact->is_starred = !$contact->is_starred;
+        $stats = [
+            'total'   => Contact::count(),
+            'pending' => Contact::where('status', 'pending')->count(),
+            'replied' => Contact::where('status', 'replied')->count(),
+            'won'     => Contact::where('status', 'won')->count(),
+            'lost'    => Contact::where('status', 'lost')->count(),
+            'today'   => Contact::whereDate('created_at', today())->count(),
+        ];
+
+        $pipeline = [
+            'pending' => Contact::where('status', 'pending')->latest()->get(),
+            'replied' => Contact::where('status', 'replied')->latest()->get(),
+            'won'     => Contact::where('status', 'won')->latest()->get(),
+            'lost'    => Contact::where('status', 'lost')->latest()->get(),
+        ];
+
+        // 7-Day Chart Analytics
+        $chartDates = [];
+        $chartCounts = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $chartDates[] = now()->subDays($i)->format('M d');
+            $chartCounts[] = Contact::whereDate('created_at', $date)->count();
+        }
+
+        return view('messages', compact('contacts', 'stats', 'pipeline', 'chartDates', 'chartCounts'));
+    })->name('messages.index');
+
+    // Update Status via Drag & Drop AJAX
+    Route::post('/messages/{id}/update-status', function (Request $request, $id) {
+        $request->validate([
+            'status' => 'required|in:pending,replied,won,lost',
+        ]);
+
+        $contact = Contact::findOrFail($id);
+        $contact->status = $request->status;
         $contact->save();
-    }
-    return back()->with('success', 'Status updated!');
-})->name('messages.toggleStar');
 
-// Read / Unread Route
-Route::post('/messages/{id}/toggle-read', function ($id) {
-    $contact = Contact::findOrFail($id);
-    $contact->status = ($contact->status === 'replied') ? 'pending' : 'replied';
-    $contact->save();
-    return back();
-})->name('messages.toggleRead');
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated successfully',
+            'status'  => $contact->status
+        ]);
+    })->name('messages.updateStatus');
 
-// Bulk Delete Route
-Route::post('/messages/bulk-delete', function (Request $request) {
-    $ids = $request->input('ids', []);
-    if (!empty($ids)) {
-        Contact::whereIn('id', $ids)->delete();
-    }
-    return back()->with('success', 'Selected messages deleted successfully!');
-})->name('messages.bulkDelete');
+    // Update Lead Details, Notes & Deal Value via Modal
+    Route::post('/messages/{id}/update-details', function (Request $request, $id) {
+        $request->validate([
+            'internal_notes' => 'nullable|string',
+            'deal_value'     => 'nullable|numeric|min:0',
+            'priority'       => 'nullable|string|in:Low,Medium,High',
+        ]);
 
-// Single Delete Route
-Route::delete('/messages/{id}', function ($id) {
-    Contact::findOrFail($id)->delete();
-    return back()->with('success', 'Message delete ho gaya!');
-})->name('messages.destroy');
+        $contact = Contact::findOrFail($id);
+        $contact->internal_notes = $request->internal_notes;
+        $contact->deal_value = $request->deal_value ?? 0;
+        if ($request->filled('priority')) {
+            $contact->priority = $request->priority;
+        }
+        $contact->save();
 
-Route::post('/messages/{id}/reply', [PageController::class, 'reply'])->name('messages.reply');
-Route::post('/crm/leads/reply', [PageController::class, 'replyLead'])->name('leads.reply');
+        return back()->with('success', 'Lead details updated successfully!');
+    })->name('messages.updateDetails');
 
-// Update Status via Drag & Drop
-Route::post('/messages/{id}/update-status', function (Request $request, $id) {
-    $request->validate([
-        'status' => 'required|string|in:pending,replied,won,lost',
-    ]);
+    // Delete Single Inquiry
+    Route::delete('/messages/{id}', function ($id) {
+        $contact = Contact::findOrFail($id);
+        $contact->delete();
+        return back()->with('success', 'Lead removed successfully!');
+    })->name('messages.destroy');
 
-    $contact = Contact::findOrFail($id);
-    $contact->status = $request->status;
-    $contact->save();
+    // Export CSV
+    Route::get('/export-csv', function () {
+        $fileName = 'leads_export_' . date('Y_m_d_His') . '.csv';
+        $contacts = Contact::all();
 
-    return response()->json(['success' => true, 'message' => 'Status updated successfully!']);
-})->name('messages.updateStatus');
-// Update Lead Details, Notes & Deal Value
-Route::post('/messages/{id}/update-details', function (Illuminate\Http\Request $request, $id) {
-    $request->validate([
-        'internal_notes' => 'nullable|string',
-        'deal_value'     => 'nullable|numeric|min:0',
-        'priority'       => 'nullable|string|in:Low,Medium,High',
-    ]);
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
 
-    $contact = App\Models\Contact::findOrFail($id);
-    $contact->internal_notes = $request->internal_notes;
-    $contact->deal_value = $request->deal_value ?? 0;
-    if ($request->filled('priority')) {
-        $contact->priority = $request->priority;
-    }
-    $contact->save();
+        $columns = ['ID', 'Name', 'Email', 'Phone', 'Message', 'Status', 'Deal Value', 'Notes', 'Created At'];
 
-    return back()->with('success', 'Lead details updated successfully!');
-})->name('messages.updateDetails');
+        $callback = function () use ($contacts, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+
+            foreach ($contacts as $contact) {
+                fputcsv($file, [
+                    $contact->id,
+                    $contact->name,
+                    $contact->email,
+                    $contact->phone ?? 'N/A',
+                    $contact->message,
+                    $contact->status,
+                    $contact->deal_value ?? 0,
+                    $contact->internal_notes ?? '',
+                    $contact->created_at ? $contact->created_at->format('Y-m-d H:i') : ''
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    })->name('messages.export.csv');
+});

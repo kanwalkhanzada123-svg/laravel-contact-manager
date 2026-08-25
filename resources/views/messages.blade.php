@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LeadDesk - CRM Dashboard</title>
+    <title>PipelinePro CRM - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-[#0f172a] text-gray-200 font-sans min-h-screen p-4 md:p-8">
 
@@ -15,11 +16,11 @@
         <header class="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#1e293b] p-4 rounded-2xl border border-slate-800 shadow-md">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
-                    LD
+                    PP
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-white tracking-wide">LeadDesk CRM</h1>
-                    <p class="text-xs text-slate-400">Inquiry & Pipeline Management</p>
+                    <h1 class="text-xl font-bold text-white tracking-wide">PipelinePro CRM</h1>
+                    <p class="text-xs text-slate-400">Smart Sales & Lead Automation</p>
                 </div>
             </div>
 
@@ -63,16 +64,16 @@
 
             <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800 flex justify-between items-center shadow-sm">
                 <div>
-                    <p class="text-xs font-semibold text-emerald-400 uppercase">Replied</p>
-                    <h2 class="text-2xl font-black text-emerald-400 mt-1">{{ $stats['replied'] }}</h2>
+                    <p class="text-xs font-semibold text-blue-400 uppercase">Discussion</p>
+                    <h2 class="text-2xl font-black text-blue-400 mt-1">{{ $stats['replied'] }}</h2>
                 </div>
-                <div class="text-2xl">✅</div>
+                <div class="text-2xl">💬</div>
             </div>
 
             <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800 flex justify-between items-center shadow-sm">
                 <div>
-                    <p class="text-xs font-semibold text-indigo-400 uppercase">Won Deals</p>
-                    <h2 class="text-2xl font-black text-indigo-400 mt-1">{{ $stats['won'] }}</h2>
+                    <p class="text-xs font-semibold text-emerald-400 uppercase">Won Deals</p>
+                    <h2 class="text-2xl font-black text-emerald-400 mt-1">{{ $stats['won'] }}</h2>
                 </div>
                 <div class="text-2xl">🏆</div>
             </div>
@@ -83,6 +84,22 @@
                     <h2 class="text-2xl font-black text-sky-400 mt-1">{{ $stats['today'] }}</h2>
                 </div>
                 <div class="text-2xl">⚡</div>
+            </div>
+        </div>
+
+        <!-- Visual Analytics Chart -->
+        <div class="bg-[#1e293b] p-5 rounded-2xl border border-slate-800 shadow-lg">
+            <div class="flex justify-between items-center mb-3">
+                <div>
+                    <h3 class="font-bold text-white text-sm">📈 Lead Volume & Inquiry Trends</h3>
+                    <p class="text-[11px] text-slate-400">Incoming inquiries over the last 7 days</p>
+                </div>
+                <span class="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                    ● Real-Time Activity
+                </span>
+            </div>
+            <div class="h-44 w-full">
+                <canvas id="leadsAnalyticsChart"></canvas>
             </div>
         </div>
 
@@ -275,10 +292,10 @@
                     </div>
                 </div>
 
-                <!-- Admin Internal Private Notes -->
+                <!-- Admin Internal Notes -->
                 <div>
                     <label class="block text-[11px] uppercase tracking-wider font-semibold text-amber-400 mb-1">📝 Internal Staff / Admin Notes</label>
-                    <textarea name="internal_notes" id="modalNotes" rows="3" placeholder="e.g. Called customer at 3 PM, requested a 10% discount on final quote..."
+                    <textarea name="internal_notes" id="modalNotes" rows="3" placeholder="e.g. Called customer at 3 PM, sent updated proposal..."
                               class="w-full p-3 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500"></textarea>
                 </div>
 
@@ -341,8 +358,47 @@
             document.getElementById('leadModal').classList.add('hidden');
         }
 
-        // SortableJS Drag & Drop
+        // Initialize Chart.js
         document.addEventListener('DOMContentLoaded', () => {
+            const ctx = document.getElementById('leadsAnalyticsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: {!! json_encode($chartDates) !!},
+                    datasets: [{
+                        label: 'Inquiries Received',
+                        data: {!! json_encode($chartCounts) !!},
+                        borderColor: '#6366f1',
+                        borderWidth: 2,
+                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#818cf8',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, color: '#94a3b8' },
+                            grid: { color: 'rgba(51, 65, 85, 0.5)' }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // SortableJS Drag & Drop
             document.querySelectorAll('.kanban-column').forEach(column => {
                 new Sortable(column, {
                     group: 'leads-pipeline',
@@ -359,8 +415,6 @@
                                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
                             },
                             body: JSON.stringify({ status: targetStatus })
-                        }).then(res => res.json()).then(data => {
-                            console.log('Status updated:', data);
                         });
                     }
                 });
