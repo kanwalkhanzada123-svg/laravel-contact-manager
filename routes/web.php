@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use App\Models\Contact;
 
 // Redirect home to contact page
@@ -36,7 +37,7 @@ Route::post('/contact', function (Request $request) {
     return back()->with('success', 'Your inquiry has been submitted successfully!');
 })->name('contact.store');
 
-// Simple Authentication Routes
+// Authentication Routes
 Route::get('/login', function () {
     if (Auth::check()) {
         return redirect()->route('messages.index');
@@ -70,7 +71,7 @@ Route::post('/logout', function (Request $request) {
 // Authenticated CRM Dashboard Routes
 Route::middleware('auth')->group(function () {
 
-    // Dashboard Overview & Pipeline
+    // Dashboard Overview
     Route::get('/messages', function () {
         $contacts = Contact::latest()->paginate(15);
 
@@ -102,6 +103,33 @@ Route::middleware('auth')->group(function () {
         return view('messages', compact('contacts', 'stats', 'pipeline', 'chartDates', 'chartCounts'));
     })->name('messages.index');
 
+    // Send Direct Email Reply
+    Route::post('/messages/{id}/reply-email', function (Request $request, $id) {
+        $request->validate([
+            'reply_subject' => 'required|string|max:255',
+            'reply_message' => 'required|string',
+        ]);
+
+        $contact = Contact::findOrFail($id);
+
+        try {
+            Mail::raw($request->reply_message, function ($message) use ($contact, $request) {
+                $message->to($contact->email)
+                        ->subject($request->reply_subject);
+            });
+
+            // Update status to replied and add to history
+            $contact->status = 'replied';
+            $logEntry = "\n[" . now()->format('M d, H:i') . "] Sent Reply: " . substr($request->reply_message, 0, 50) . '...';
+            $contact->internal_notes = ($contact->internal_notes ?? '') . $logEntry;
+            $contact->save();
+
+            return back()->with('success', 'Email reply sent successfully to ' . $contact->email);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to send email: ' . $e->getMessage());
+        }
+    })->name('messages.replyEmail');
+
     // Update Status via Drag & Drop AJAX
     Route::post('/messages/{id}/update-status', function (Request $request, $id) {
         $request->validate([
@@ -119,7 +147,7 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('messages.updateStatus');
 
-    // Update Lead Details, Notes & Deal Value via Modal
+    // Update Lead Details via Modal
     Route::post('/messages/{id}/update-details', function (Request $request, $id) {
         $request->validate([
             'internal_notes' => 'nullable|string',

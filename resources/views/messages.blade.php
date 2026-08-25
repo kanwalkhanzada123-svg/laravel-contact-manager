@@ -12,6 +12,18 @@
 
     <div class="max-w-7xl mx-auto space-y-6">
 
+        <!-- Flash Messages -->
+        @if(session('success'))
+            <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
+                <span>✅</span> {{ session('success') }}
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm">
+                <span>⚠️</span> {{ session('error') }}
+            </div>
+        @endif
+
         <!-- Top Header Navigation -->
         <header class="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#1e293b] p-4 rounded-2xl border border-slate-800 shadow-md">
             <div class="flex items-center gap-3">
@@ -25,7 +37,6 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <!-- View Switcher -->
                 <div class="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-700">
                     <button onclick="toggleView('table')" id="btn-table" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition">📋 Table</button>
                     <button onclick="toggleView('pipeline')" id="btn-pipeline" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">📌 Pipeline</button>
@@ -44,7 +55,7 @@
             </div>
         </header>
 
-        <!-- Stats Overview Cards -->
+        <!-- Stats Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800 flex justify-between items-center shadow-sm">
                 <div>
@@ -87,7 +98,7 @@
             </div>
         </div>
 
-        <!-- Visual Analytics Chart -->
+        <!-- Chart Section -->
         <div class="bg-[#1e293b] p-5 rounded-2xl border border-slate-800 shadow-lg">
             <div class="flex justify-between items-center mb-3">
                 <div>
@@ -168,7 +179,7 @@
             @endif
         </div>
 
-        <!-- KANBAN PIPELINE VIEW -->
+        <!-- PIPELINE KANBAN VIEW -->
         <div id="pipeline-view" class="hidden grid grid-cols-1 md:grid-cols-4 gap-4">
             
             <!-- Pending -->
@@ -191,7 +202,7 @@
                 </div>
             </div>
 
-            <!-- Replied / Discussion -->
+            <!-- Replied -->
             <div class="bg-[#1e293b] p-4 rounded-2xl border border-slate-800">
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="font-bold text-blue-400 text-sm">💬 Discussion</h3>
@@ -255,10 +266,11 @@
 
     </div>
 
-    <!-- POPUP MODAL: Lead Details & Notes -->
+    <!-- POPUP MODAL: Tabs for Details & Direct Email -->
     <div id="leadModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-[#1e293b] border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div class="bg-[#1e293b] border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
             
+            <!-- Modal Header -->
             <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
                 <div>
                     <h3 id="modalName" class="text-lg font-bold text-white">Lead Details</h3>
@@ -267,47 +279,76 @@
                 <button onclick="closeLeadModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2 py-1">✕</button>
             </div>
 
-            <form id="modalUpdateForm" method="POST" class="p-5 space-y-4">
-                @csrf
-                <!-- Customer Message Display -->
-                <div>
-                    <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Customer Inquiry Message</label>
-                    <div id="modalMessage" class="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs text-slate-200 whitespace-pre-wrap max-h-32 overflow-y-auto"></div>
-                </div>
+            <!-- Modal Nav Tabs -->
+            <div class="flex border-b border-slate-800 bg-slate-900/30 px-5 pt-3 gap-4 text-xs font-semibold">
+                <button type="button" onclick="switchModalTab('tab-details')" id="nav-tab-details" class="pb-2 border-b-2 border-indigo-500 text-white transition">📝 Notes & Details</button>
+                <button type="button" onclick="switchModalTab('tab-email')" id="nav-tab-email" class="pb-2 border-b-2 border-transparent text-slate-400 hover:text-white transition">✉️ Quick Email Reply</button>
+            </div>
 
-                <div class="grid grid-cols-2 gap-3">
+            <!-- TAB 1: Lead Details Form -->
+            <div id="tab-details-content" class="p-5 space-y-4">
+                <form id="modalUpdateForm" method="POST" class="space-y-4">
+                    @csrf
                     <div>
-                        <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Deal Value ($)</label>
-                        <input type="number" name="deal_value" id="modalDealValue" step="10" placeholder="0"
-                               class="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-indigo-400 font-bold focus:outline-none focus:border-indigo-500">
+                        <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Customer Inquiry</label>
+                        <div id="modalMessage" class="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs text-slate-200 whitespace-pre-wrap max-h-28 overflow-y-auto"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Deal Value ($)</label>
+                            <input type="number" name="deal_value" id="modalDealValue" step="10" placeholder="0"
+                                   class="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-indigo-400 font-bold focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Priority</label>
+                            <select name="priority" id="modalPriority" class="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div>
-                        <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Priority</label>
-                        <select name="priority" id="modalPriority" class="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500">
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
+                        <label class="block text-[11px] uppercase tracking-wider font-semibold text-amber-400 mb-1">📝 Internal Staff Notes</label>
+                        <textarea name="internal_notes" id="modalNotes" rows="3" placeholder="Add private team notes..."
+                                  class="w-full p-3 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500"></textarea>
                     </div>
-                </div>
 
-                <!-- Admin Internal Notes -->
-                <div>
-                    <label class="block text-[11px] uppercase tracking-wider font-semibold text-amber-400 mb-1">📝 Internal Staff / Admin Notes</label>
-                    <textarea name="internal_notes" id="modalNotes" rows="3" placeholder="e.g. Called customer at 3 PM, sent updated proposal..."
-                              class="w-full p-3 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500"></textarea>
-                </div>
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                        <button type="button" onclick="closeLeadModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
+                        <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-md">Save Changes</button>
+                    </div>
+                </form>
+            </div>
 
-                <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
-                    <button type="button" onclick="closeLeadModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
-                        Cancel
-                    </button>
-                    <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-md">
-                        Save Notes & Updates
-                    </button>
-                </div>
-            </form>
+            <!-- TAB 2: Direct Email Reply Form -->
+            <div id="tab-email-content" class="hidden p-5 space-y-4">
+                <form id="modalEmailForm" method="POST" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-1">Subject</label>
+                        <input type="text" name="reply_subject" id="modalEmailSubject" value="Re: Inquiry via PipelinePro CRM" required
+                               class="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] uppercase tracking-wider font-semibold text-indigo-400 mb-1">Email Body Message</label>
+                        <textarea name="reply_message" id="modalEmailMessage" rows="5" required placeholder="Type your response to customer..."
+                                  class="w-full p-3 text-xs bg-slate-900 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                        <button type="button" onclick="closeLeadModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
+                        <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition shadow-md flex items-center gap-1.5">
+                            🚀 Send Email Now
+                        </button>
+                    </div>
+                </form>
+            </div>
+
         </div>
     </div>
 
@@ -332,6 +373,25 @@
             }
         }
 
+        function switchModalTab(tab) {
+            const detailsContent = document.getElementById('tab-details-content');
+            const emailContent = document.getElementById('tab-email-content');
+            const navDetails = document.getElementById('nav-tab-details');
+            const navEmail = document.getElementById('nav-tab-email');
+
+            if (tab === 'tab-email') {
+                detailsContent.classList.add('hidden');
+                emailContent.classList.remove('hidden');
+                navEmail.className = "pb-2 border-b-2 border-indigo-500 text-white transition";
+                navDetails.className = "pb-2 border-b-2 border-transparent text-slate-400 hover:text-white transition";
+            } else {
+                emailContent.classList.add('hidden');
+                detailsContent.classList.remove('hidden');
+                navDetails.className = "pb-2 border-b-2 border-indigo-500 text-white transition";
+                navEmail.className = "pb-2 border-b-2 border-transparent text-slate-400 hover:text-white transition";
+            }
+        }
+
         function searchTable() {
             let input = document.getElementById('searchInput').value.toLowerCase();
             let rows = document.querySelectorAll('#leadsTableBody tr');
@@ -341,7 +401,6 @@
             });
         }
 
-        // Modal Open / Close Logic
         function openLeadModal(lead) {
             document.getElementById('modalName').innerText = lead.name;
             document.getElementById('modalEmail').innerText = lead.email + (lead.phone ? ' • ' + lead.phone : '');
@@ -351,6 +410,9 @@
             document.getElementById('modalPriority').value = lead.priority || 'Medium';
 
             document.getElementById('modalUpdateForm').action = `/messages/${lead.id}/update-details`;
+            document.getElementById('modalEmailForm').action = `/messages/${lead.id}/reply-email`;
+            
+            switchModalTab('tab-details');
             document.getElementById('leadModal').classList.remove('hidden');
         }
 
@@ -358,7 +420,7 @@
             document.getElementById('leadModal').classList.add('hidden');
         }
 
-        // Initialize Chart.js
+        // Chart.js Setup
         document.addEventListener('DOMContentLoaded', () => {
             const ctx = document.getElementById('leadsAnalyticsChart').getContext('2d');
             new Chart(ctx, {
