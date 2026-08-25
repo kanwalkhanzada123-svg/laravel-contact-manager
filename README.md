@@ -1,56 +1,32 @@
-# ?? LeadDesk - CRM & Lead Management System
+# 🚀 LeadDesk CRM - Inquiry & Sales Pipeline Management System
 
-A modern, full-stack Inquiry & Lead Management Dashboard built with **Laravel**, **Tailwind CSS**, and **Chart.js**. It streamlines contact form submissions, customer inquiries, email workflows, and lead qualification for businesses.
-
----
-
-## ? Features
-
-- ?? **Real-time Analytics & Charts:** Interactive Bar graphs and Doughnut conversion metrics powered by Chart.js.
-- ? **Quick Reply Templates:** Single-click canned responses (Quotations, Meeting schedules, Query resolution).
-- ?? **Automated Workflows:** Auto-responder acknowledgment emails sent to customers upon form submission.
-- ? **Priority & Starred Leads:** Flag high-value inquiries to pin and filter them easily.
-- ?? **Internal Admin Notes:** Keep private CRM notes and remarks per lead for team reference.
-- ??? **Tab-Based Status Filters:** Instant filtering for *All*, *Pending*, *Replied*, and *Starred* inquiries.
-- ?? **Bulk Actions:** Multi-select leads with checkboxes for batch deletion.
-- ?? **CSV Export:** One-click data export of all inquiries and internal notes.
-- ?? **Real-Time Search:** Search leads by name, email, message body, or private notes.
-- ?? **Dark & Light Mode:** Seamless theme switching with persistent local storage state.
-- ?? **Authentication & Security:** Protected CRM routes with session-based authentication.
+A full-featured Customer Relationship Management (CRM) and Lead Management application built with **Laravel**, **Blade**, **Tailwind CSS**, and **SortableJS**.
 
 ---
 
-## ??? Tech Stack
+## 🌟 Key Features
 
-- **Backend:** Laravel, PHP
-- **Database:** MySQL / SQLite (Eloquent ORM, Migrations)
-- **Frontend:** Blade Templates, Tailwind CSS, JavaScript
-- **Visuals:** Chart.js
-- **Mailing:** Laravel Mailables, SMTP / Log Drivers
+* **📊 Live Metric Cards:** Real-time statistics tracking Total Leads, Pending, Replied, Won Deals, and Today's Inquiries.
+* **📋 Inquiries Inbox (Table View):** Searchable, responsive table listing all client messages with status badges and deletion management.
+* **📌 Drag & Drop Kanban Pipeline:** Interactive deal board allowing leads to be moved between stages (*Pending → Discussion → Won Deals → Lost*) with instant asynchronous status persistence.
+* **📝 Lead Details & Notes Modal:** Detailed popup to inspect client inquiries, assign deal values ($), set priority levels, and log private admin/staff internal notes.
+* **📥 CSV Data Export:** One-click instant download of all leads and inquiries for offline reporting.
+* **🔐 Admin Authentication:** Secure login/logout system protecting administrative routes.
 
 ---
 
-## ?? Installation & Local Setup
+## 🛠️ Tech Stack
 
-\\\ash
-# 1. Clone repository
-git clone https://github.com/kanwalkhanzada123-svg/laravel-contact-manager.git
-cd laravel-contact-manager
+* **Backend:** PHP / Laravel
+* **Frontend:** Blade Templates, Tailwind CSS
+* **Interactivity:** Vanilla JavaScript, SortableJS
+* **Database:** MySQL / PostgreSQL
 
-# 2. Install dependencies
-composer install
+---
 
-# 3. Environment setup
-cp .env.example .env
-php artisan key:generate
+## 🚀 Getting Started Locally
 
-# 4. Run migrations
-php artisan migrate
-
-# 5. Start development server
-php artisan serve
-\\\
-
-Access in browser:
-- **Contact Form:** http://127.0.0.1:8000/contact
-- **Admin CRM:** http://127.0.0.1:8000/messages
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/kanwalkhanzada123-svg/laravel-contact-manager.git
+   cd laravel-contact-manager
