@@ -1,0 +1,15 @@
+﻿services:
+  - type: web
+    name: pipelinepro-crm
+    env: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_CHANNEL
+        value: stderr
